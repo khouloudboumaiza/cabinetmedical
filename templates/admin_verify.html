@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Intégrité des logs{% endblock %}
+{% block crumb %}<strong>Admin</strong> · Intégrité des logs{% endblock %}
+{% block content %}
+<div class="page-title">Vérification d'intégrité</div>
+<div class="page-subtitle">Contrôle de la chaîne cryptographique HMAC des logs de connexion.</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-label">ENTRÉES VÉRIFIÉES</div>
+        <div class="kpi-value">{{ total }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">STATUT DE LA CHAÎNE</div>
+        <div class="kpi-value {{ 'success' if result.valid else 'danger' }}" style="font-size:18px;">
+            {{ "Intègre" if result.valid else "Compromise" }}
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    {% if result.valid %}
+        <div class="flash flash-success">
+            ✅ Chaîne intègre — aucune trace de falsification ou de suppression détectée sur les {{ total }} entrées.
+        </div>
+    {% else %}
+        <div class="flash flash-error">
+            ⚠️ ALERTE INTÉGRITÉ — la chaîne est cassée à l'entrée #{{ result.broken_at }}.<br>
+            {{ result.reason }}<br>
+            Cela signifie qu'une ligne a été modifiée ou supprimée en dehors de l'application
+            (accès direct à la base, ou compromission du serveur).
+        </div>
+    {% endif %}
+    <a class="btn btn-secondary" href="{{ url_for('admin.logs') }}">Retour aux logs</a>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Nouveau dossier · {{ patient.full_name }} · MediCabinet{% endblock %}
+{% block crumb %}Nouveau dossier médical{% endblock %}
+{% block crumbsub %}Patient : {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<div class="encrypt-note">
+  🔒 Le contenu sera chiffré avec AES-256-GCM avant d'être enregistré en base de données.
+</div>
+<div class="form-card">
+  <form method="POST">
+    <div class="field">
+      <label>Titre du dossier *</label>
+      <input name="title" required placeholder="Consultation du 24/09/2026, Compte-rendu opératoire…">
+    </div>
+    <div class="field">
+      <label>Contenu médical *</label>
+      <textarea name="content" required style="min-height:200px"
+                placeholder="Observations cliniques, diagnostic, traitement prescrit, notes du médecin…"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn" type="submit">🔐 Enregistrer (chiffré)</button>
+      <a class="btn btn-outline" href="{{ url_for('cabinet.records', patient_id=patient.id) }}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

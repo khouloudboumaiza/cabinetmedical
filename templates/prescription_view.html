@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Ordonnance #{{ rx.id }} · MediCabinet{% endblock %}
+{% block crumb %}Ordonnance #{{ rx.id }}{% endblock %}
+{% block crumbsub %}Patient : {{ rx.patient.full_name }} · Dr {{ rx.medecin.email }} · {{ rx.created_at.strftime('%d/%m/%Y') }}{% endblock %}
+
+{% block content %}
+<div class="encrypt-note">
+  🔒 Médicaments déchiffrés à la volée — AES-256-GCM
+</div>
+
+<div class="panel">
+  <div class="panel-body">
+    <div class="field" style="margin-bottom:20px">
+      <label style="text-transform:uppercase;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.06em">
+        Diagnostic
+      </label>
+      <div style="font-size:16px;font-weight:600;margin-top:6px">{{ rx.diagnosis }}</div>
+    </div>
+    <div class="field">
+      <label style="text-transform:uppercase;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.06em">
+        Médicaments & posologie
+      </label>
+      <div class="pre-wrap" style="margin-top:6px">{{ medications }}</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+  <a class="btn" href="{{ url_for('cabinet.prescription_print', rx_id=rx.id) }}" target="_blank">
+    🖨 Imprimer l'ordonnance
+  </a>
+  <a class="btn btn-outline" href="{{ url_for('cabinet.prescriptions', patient_id=rx.patient_id) }}">
+    ← Retour aux ordonnances
+  </a>
+</div>
+{% endblock %}

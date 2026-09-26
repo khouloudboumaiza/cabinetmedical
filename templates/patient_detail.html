@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}{{ patient.full_name }} · MediCabinet{% endblock %}
+{% block crumb %}{{ patient.full_name }}{% endblock %}
+{% block crumbsub %}Fiche patient · {{ patient.phone or 'sans téléphone' }}{% endblock %}
+
+{% block content %}
+{% if patient.allergies %}
+<div class="alert-box">
+  ⚠️ <strong>Allergies / antécédents :</strong> {{ patient.allergies }}
+</div>
+{% endif %}
+
+<!-- Informations patient -->
+<div class="info-grid">
+  <div class="info-item">
+    <div class="k">Né(e) le</div>
+    <div class="v">{{ patient.date_of_birth.strftime('%d/%m/%Y') if patient.date_of_birth else '—' }}</div>
+  </div>
+  <div class="info-item">
+    <div class="k">Âge</div>
+    <div class="v">{{ patient.age() ~ ' ans' if patient.age() is not none else '—' }}</div>
+  </div>
+  <div class="info-item">
+    <div class="k">Sexe</div>
+    <div class="v">{{ 'Féminin' if patient.gender == 'F' else ('Masculin' if patient.gender == 'M' else '—') }}</div>
+  </div>
+  <div class="info-item">
+    <div class="k">Groupe sanguin</div>
+    <div class="v">{{ patient.blood_type or '—' }}</div>
+  </div>
+  <div class="info-item">
+    <div class="k">Téléphone</div>
+    <div class="v mono">{{ patient.phone or '—' }}</div>
+  </div>
+  <div class="info-item">
+    <div class="k">Adresse</div>
+    <div class="v">{{ patient.address or '—' }}</div>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="page-head">
+  <div>
+    <h2>Dossier médical</h2>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn btn-outline btn-sm" href="{{ url_for('cabinet.records', patient_id=patient.id) }}">
+      📋 Dossiers ({{ records|length }})
+    </a>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('cabinet.prescriptions', patient_id=patient.id) }}">
+      💊 Ordonnances ({{ ordonnances|length }})
+    </a>
+    {% if current_user.has_role('secretaire','admin') %}
+    <a class="btn btn-sm" href="{{ url_for('cabinet.patient_edit', patient_id=patient.id) }}">
+      ✏️ Modifier
+    </a>
+    {% endif %}
+    {% if current_user.is_admin() %}
+    <form method="POST" action="{{ url_for('cabinet.patient_delete', patient_id=patient.id) }}"
+          style="display:inline"
+          onsubmit="return confirm('Supprimer ce patient et toutes ses données ? Cette action est irréversible.')">
+      <button class="btn btn-danger btn-sm" type="submit">🗑 Supprimer</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Rendez-vous récents -->
+<div class="panel">
+  <div class="panel-head">
+    <h3>Rendez-vous récents</h3>
+    {% if current_user.has_role('secretaire','admin') %}
+    <a class="btn btn-sm" href="{{ url_for('cabinet.appointment_new') }}">+ RDV</a>
+    {% endif %}
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Médecin</th>
+        <th>Motif</th>
+        <th>Durée</th>
+        <th>Statut</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rdv %}
+      <tr>
+        <td class="mono">{{ r.scheduled_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td>{{ r.medecin.email }}</td>
+        <td>{{ r.motif }}</td>
+        <td>{{ r.duration_minutes }} min</td>
+        <td>
+          <span class="badge badge-{{ r.status }}">
+            {{ r.status|replace('planifie','Planifié')|replace('confirme','Confirmé')|replace('termine','Terminé')|replace('annule','Annulé') }}
+          </span>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Aucun rendez-vous.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if current_user.role == 'medecin' %}
+<a class="btn btn-outline" href="{{ url_for('cabinet.appointments') }}">← Retour au planning</a>
+{% else %}
+<a class="btn btn-outline" href="{{ url_for('cabinet.patients') }}">← Retour à la liste</a>
+{% endif %}
+{% endblock %}

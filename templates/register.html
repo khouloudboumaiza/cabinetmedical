@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Inscription patient · MediCabinet{% endblock %}
+{% block guest %}
+<nav class="guest-nav">
+  <div class="brand">
+    <div class="brand-logo">+</div>
+    <div><div class="brand-name">MediCabinet</div></div>
+  </div>
+  <a href="{{ url_for('auth.login') }}" class="link">Déjà inscrit ?</a>
+</nav>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px">
+  <div class="auth-card" style="max-width:480px">
+    <h2>Créer mon compte patient</h2>
+    <div class="sub">Inscription réservée aux patients. Le personnel est créé par l'administrateur.</div>
+    <form method="POST" action="{{ url_for('auth.register') }}">
+      <div class="form-grid">
+        <div class="field">
+          <label>Prénom *</label>
+          <input name="first_name" required placeholder="Jean">
+        </div>
+        <div class="field">
+          <label>Nom *</label>
+          <input name="last_name" required placeholder="Dupont">
+        </div>
+      </div>
+      <div class="field">
+        <label>Email *</label>
+        <input type="email" name="email" required placeholder="jean.dupont@email.com">
+      </div>
+      <div class="field">
+        <label>Téléphone (optionnel)</label>
+        <input name="phone" placeholder="06 12 34 56 78">
+      </div>
+      <div class="field">
+        <label>Mot de passe *</label>
+        <input type="password" name="password" required placeholder="••••••••••••">
+        <span class="help">12 caractères minimum : majuscule, minuscule et chiffre.</span>
+      </div>
+      <button class="btn" style="width:100%;justify-content:center" type="submit">
+        Créer mon compte →
+      </button>
+    </form>
+    <div class="foot">Déjà inscrit ? <a class="link" href="{{ url_for('auth.login') }}">Se connecter</a></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Rendez-vous · MediCabinet{% endblock %}
+{% block crumb %}Rendez-vous{% endblock %}
+{% block crumbsub %}Planning du cabinet{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h2>Rendez-vous</h2>
+    <p>{{ appointments|length }} enregistrement(s)</p>
+  </div>
+  {% if current_user.has_role('secretaire','admin') %}
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <form method="GET" style="display:flex;gap:8px;align-items:center">
+      <label style="font-size:13px;color:var(--muted);font-weight:500">Filtrer par jour :</label>
+      <input type="date" name="jour" value="{{ jour or '' }}"
+             style="padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px"
+             onchange="this.form.submit()">
+      {% if jour %}<a href="{{ url_for('cabinet.appointments') }}" style="font-size:13px;color:var(--muted)">✕ Effacer</a>{% endif %}
+    </form>
+    <a class="btn" href="{{ url_for('cabinet.appointment_new') }}">+ Nouveau rendez-vous</a>
+  </div>
+  {% elif current_user.role == 'medecin' %}
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <form method="GET" style="display:flex;gap:8px;align-items:center">
+      <label style="font-size:13px;color:var(--muted);font-weight:500">Filtrer par jour :</label>
+      <input type="date" name="jour" value="{{ jour or '' }}"
+             style="padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px"
+             onchange="this.form.submit()">
+      {% if jour %}<a href="{{ url_for('cabinet.appointments') }}" style="font-size:13px;color:var(--muted)">✕ Effacer</a>{% endif %}
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Date & heure</th>
+        <th>Patient</th>
+        <th>Médecin</th>
+        <th>Motif</th>
+        <th>Durée</th>
+        <th>Statut</th>
+        {% if current_user.has_role('secretaire','medecin','admin') %}<th>Actions</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for rdv in appointments %}
+      <tr>
+        <td class="mono">{{ rdv.scheduled_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td>
+          {% if current_user.has_role('secretaire','medecin','admin') %}
+          <a class="link" href="{{ url_for('cabinet.patient_detail', patient_id=rdv.patient_id) }}">
+            {{ rdv.patient.full_name }}
+          </a>
+          {% else %}
+          {{ rdv.patient.full_name }}
+          {% endif %}
+        </td>
+        <td>{{ rdv.medecin.email }}</td>
+        <td>{{ rdv.motif }}</td>
+        <td>{{ rdv.duration_minutes }} min</td>
+        <td>
+          <span class="badge badge-{{ rdv.status }}">
+            {{ rdv.status|replace('planifie','Planifié')|replace('confirme','Confirmé')|replace('termine','Terminé')|replace('annule','Annulé') }}
+          </span>
+        </td>
+        {% if current_user.has_role('secretaire','medecin','admin') %}
+        <td>
+          {% if rdv.status in ['planifie','confirme'] %}
+          <form method="POST"
+                action="{{ url_for('cabinet.appointment_status', rdv_id=rdv.id) }}"
+                style="display:flex;gap:6px;flex-wrap:wrap">
+            {% if rdv.status == 'planifie' %}
+            <button class="btn btn-sm" name="status" value="confirme">Confirmer</button>
+            {% endif %}
+            <button class="btn btn-outline btn-sm" name="status" value="termine">Terminé</button>
+            <button class="btn btn-danger btn-sm" name="status" value="annule">Annuler</button>
+          </form>
+          {% else %}
+          <span style="color:var(--muted);font-size:12px">—</span>
+          {% endif %}
+        </td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" style="color:var(--muted);text-align:center;padding:40px">
+          Aucun rendez-vous{% if jour %} pour cette date{% endif %}.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

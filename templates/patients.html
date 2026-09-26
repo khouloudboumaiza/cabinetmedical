@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Patients · MediCabinet{% endblock %}
+{% block crumb %}Patients{% endblock %}
+{% block crumbsub %}Gestion des fiches patients{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h2>Gestion des patients</h2>
+    <p>{{ patients|length }} fiche(s) trouvée(s)</p>
+  </div>
+  {% if current_user.has_role('secretaire','admin') %}
+  <a class="btn" href="{{ url_for('cabinet.patient_new') }}">+ Nouveau patient</a>
+  {% endif %}
+</div>
+
+<form class="search-bar" method="GET">
+  <input type="text" name="q" value="{{ q }}" placeholder="Rechercher par nom, prénom ou téléphone…">
+  <button class="btn btn-outline" type="submit">🔍 Rechercher</button>
+  {% if q %}<a class="btn btn-outline" href="{{ url_for('cabinet.patients') }}">✕ Effacer</a>{% endif %}
+</form>
+
+<div class="panel">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nom complet</th>
+        <th>Âge</th>
+        <th>Téléphone</th>
+        <th>Groupe sanguin</th>
+        <th>Allergies</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in patients %}
+      <tr>
+        <td><strong>{{ p.last_name }}</strong> {{ p.first_name }}</td>
+        <td>{{ p.age() ~ ' ans' if p.age() is not none else '—' }}</td>
+        <td class="mono">{{ p.phone or '—' }}</td>
+        <td>{{ p.blood_type or '—' }}</td>
+        <td>
+          {% if p.allergies %}
+          <span style="color:var(--warning)">⚠ Oui</span>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          <a class="btn btn-outline btn-sm" href="{{ url_for('cabinet.patient_detail', patient_id=p.id) }}">
+            Ouvrir →
+          </a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" style="color:var(--muted);text-align:center;padding:40px">
+          Aucun patient trouvé.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Ordonnance #{{ rx.id }} · {{ rx.patient.full_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body style="background:#e5e7eb">
+
+<div class="print-doc">
+  <!-- En-tête -->
+  <div class="print-head">
+    <div>
+      <div style="color:var(--primary-dark);font-size:22px;font-weight:800">MediCabinet</div>
+      <div style="color:var(--muted);font-size:13px;margin-top:4px">
+        Dr {{ rx.medecin.email }}<br>
+        Cabinet médical · Tél. 01 23 45 67 89<br>
+        contact@medicabinet.fr
+      </div>
+    </div>
+    <div style="text-align:right;font-size:13px;color:var(--muted)">
+      <div style="font-weight:600;color:var(--ink)">Fait le {{ rx.created_at.strftime('%d/%m/%Y') }}</div>
+      <div>Ordonnance N° {{ rx.id }}</div>
+    </div>
+  </div>
+
+  <!-- Patient -->
+  <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:24px">
+    <div style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600">Patient</div>
+    <div style="font-size:17px;font-weight:700;margin-top:4px">{{ rx.patient.full_name }}</div>
+    {% if rx.patient.date_of_birth %}
+    <div style="color:var(--muted);font-size:13px">
+      Né(e) le {{ rx.patient.date_of_birth.strftime('%d/%m/%Y') }}
+      {% if rx.patient.age() %} · {{ rx.patient.age() }} ans{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Titre -->
+  <div class="rx-title">Ordonnance médicale</div>
+
+  <!-- Corps -->
+  <div class="rx-body">
+    <strong style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Diagnostic :</strong>
+    <p style="font-size:16px;font-weight:600;margin:6px 0 20px">{{ rx.diagnosis }}</p>
+
+    <strong style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Prescription :</strong>
+    <div style="margin-top:8px">{{ medications }}</div>
+  </div>
+
+  <!-- Signature -->
+  <div class="rx-sign">
+    <div style="text-align:center">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:50px">Signature et cachet du médecin</div>
+      <div style="border-top:1px solid #cbd5e1;padding-top:8px;width:200px;font-size:13px;color:var(--muted)">
+        Dr {{ rx.medecin.email }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bouton impression (masqué à l'impression) -->
+<div class="no-print" style="text-align:center;margin:24px">
+  <button class="btn" onclick="window.print()" style="padding:12px 28px;font-size:15px">
+    🖨 Imprimer
+  </button>
+  <a href="{{ url_for('cabinet.prescription_view', rx_id=rx.id) }}"
+     class="btn btn-outline" style="margin-left:10px;padding:12px 20px">
+    ← Retour
+  </a>
+</div>
+
+</body>
+</html>

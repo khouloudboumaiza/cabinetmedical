@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Logs de connexion{% endblock %}
+{% block crumb %}<strong>Admin</strong> · Logs de connexion{% endblock %}
+{% block content %}
+<div class="page-title">Historique des connexions</div>
+<div class="page-subtitle">200 dernières entrées — journal en écriture seule (append-only).</div>
+
+<div class="panel">
+    <table class="table">
+        <thead>
+            <tr><th>Date</th><th>Utilisateur</th><th>Méthode</th><th>IP</th><th>Pays</th><th>Résultat</th></tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td class="mono">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>{{ log.user.email if log.user else '—' }}</td>
+                <td>{{ log.login_method }}</td>
+                <td class="mono">{{ log.ip_address }}</td>
+                <td>{{ log.country }}</td>
+                <td>
+                    {% if log.success %}
+                        <span class="badge badge-success">réussie</span>
+                    {% else %}
+                        <span class="badge badge-fail">échouée</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6">Aucun log pour le moment.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ record.title }} · MediCabinet{% endblock %}
+{% block crumb %}{{ record.title }}{% endblock %}
+{% block crumbsub %}Patient : {{ record.patient.full_name }} · Dr {{ record.medecin.email }} · {{ record.created_at.strftime('%d/%m/%Y à %H:%M') }}{% endblock %}
+
+{% block content %}
+<div class="encrypt-note">
+  🔒 Contenu déchiffré à la volée — AES-256-GCM — jamais stocké en clair
+</div>
+
+<div class="panel">
+  <div class="panel-body">
+    <div class="pre-wrap">{{ content }}</div>
+  </div>
+</div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+  <a class="btn btn-outline" href="{{ url_for('cabinet.records', patient_id=record.patient_id) }}">
+    ← Retour aux dossiers
+  </a>
+  <a class="btn btn-outline" href="{{ url_for('cabinet.patient_detail', patient_id=record.patient_id) }}">
+    Fiche patient
+  </a>
+</div>
+{% endblock %}

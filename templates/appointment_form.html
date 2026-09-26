@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Nouveau rendez-vous · MediCabinet{% endblock %}
+{% block crumb %}Nouveau rendez-vous{% endblock %}
+{% block crumbsub %}Planifier une consultation{% endblock %}
+
+{% block content %}
+<div class="form-card">
+  <form method="POST">
+    <div class="field">
+      <label>Patient *</label>
+      <select name="patient_id" required>
+        <option value="">— Sélectionner un patient —</option>
+        {% for p in patients %}
+        <option value="{{ p.id }}">{{ p.last_name }} {{ p.first_name }}{% if p.date_of_birth %} ({{ p.age() }} ans){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Médecin *</label>
+      <select name="medecin_id" required>
+        <option value="">— Sélectionner un médecin —</option>
+        {% for m in medecins %}
+        <option value="{{ m.id }}">Dr {{ m.email }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Date et heure *</label>
+        <input type="datetime-local" name="scheduled_at" required>
+      </div>
+      <div class="field">
+        <label>Durée (minutes)</label>
+        <input type="number" name="duration_minutes" value="30" min="10" max="180" step="5">
+      </div>
+    </div>
+    <div class="field">
+      <label>Motif de la consultation *</label>
+      <input name="motif" required placeholder="Consultation générale, contrôle, urgence…">
+    </div>
+    <div class="field">
+      <label>Notes complémentaires (optionnel)</label>
+      <textarea name="notes" placeholder="Informations supplémentaires pour le médecin…"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn" type="submit">📅 Planifier le rendez-vous</button>
+      <a class="btn btn-outline" href="{{ url_for('cabinet.appointments') }}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

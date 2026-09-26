@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Nouvelle ordonnance · {{ patient.full_name }} · MediCabinet{% endblock %}
+{% block crumb %}Nouvelle ordonnance{% endblock %}
+{% block crumbsub %}Patient : {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<div class="encrypt-note">
+  🔒 La liste des médicaments sera chiffrée avec AES-256-GCM avant d'être enregistrée.
+</div>
+<div class="form-card">
+  <form method="POST">
+    <div class="field">
+      <label>Diagnostic *</label>
+      <input name="diagnosis" required placeholder="Rhinopharyngite aiguë, Hypertension artérielle…">
+    </div>
+    <div class="field">
+      <label>Médicaments & posologie *</label>
+      <textarea name="medications" required style="min-height:160px"
+                placeholder="Amoxicilline 500mg — 3×/jour pendant 7 jours&#10;Paracétamol 1g — 3×/jour si douleur…"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn" type="submit">💊 Créer l'ordonnance</button>
+      <a class="btn btn-outline" href="{{ url_for('cabinet.prescriptions', patient_id=patient.id) }}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

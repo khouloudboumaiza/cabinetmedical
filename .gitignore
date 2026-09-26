@@ -1,0 +1,23 @@
+﻿# Environnement virtuel
+venv/
+
+# Fichiers secrets et configuration
+.env
+secret_aes.key
+
+# Base de données (ne pas envoyer les données médicales/utilisateurs)
+*.db
+app.db
+
+# Fichiers générés par Python
+__pycache__/
+*.pyc
+
+# Caches et tests
+.pytest_cache/
+
+# Scripts de test temporaires
+add_modal.py
+check_modal.py
+fix_index.py
+verify_modal.py

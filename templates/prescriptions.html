@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Ordonnances · {{ patient.full_name }} · MediCabinet{% endblock %}
+{% block crumb %}Ordonnances{% endblock %}
+{% block crumbsub %}Patient : {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<div class="encrypt-note">
+  🔒 Médicaments chiffrés AES-256-GCM — déchiffrés à la volée à l'ouverture.
+</div>
+
+<div class="page-head">
+  <div>
+    <h2>Ordonnances</h2>
+    <p>Patient : <strong>{{ patient.full_name }}</strong></p>
+  </div>
+  <div style="display:flex;gap:8px">
+    {% if current_user.has_role('medecin','admin') %}
+    <a class="btn" href="{{ url_for('cabinet.prescription_new', patient_id=patient.id) }}">
+      + Nouvelle ordonnance
+    </a>
+    {% endif %}
+    <a class="btn btn-outline" href="{{ url_for('cabinet.patient_detail', patient_id=patient.id) }}">
+      ← Fiche patient
+    </a>
+  </div>
+</div>
+
+<div class="panel">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>N°</th>
+        <th>Diagnostic</th>
+        <th>Médecin</th>
+        <th>Date</th>
+        <th style="text-align:right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rx in prescriptions %}
+      <tr>
+        <td class="mono"><strong>#{{ rx.id }}</strong></td>
+        <td>{{ rx.diagnosis }}</td>
+        <td>Dr {{ rx.medecin.email }}</td>
+        <td class="mono">{{ rx.created_at.strftime('%d/%m/%Y') }}</td>
+        <td style="text-align:right">
+          <a class="btn btn-outline btn-sm" href="{{ url_for('cabinet.prescription_view', rx_id=rx.id) }}">
+            Ouvrir
+          </a>
+          <a class="btn btn-sm" href="{{ url_for('cabinet.prescription_print', rx_id=rx.id) }}" target="_blank">
+            🖨 Imprimer
+          </a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" style="color:var(--muted);text-align:center;padding:40px">
+          Aucune ordonnance enregistrée.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

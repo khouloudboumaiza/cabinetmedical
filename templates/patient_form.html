@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifier le patient' if patient else 'Nouveau patient' }} · MediCabinet{% endblock %}
+{% block crumb %}{{ 'Modifier : ' ~ patient.full_name if patient else 'Nouveau patient' }}{% endblock %}
+{% block crumbsub %}{% if patient %}Modifier la fiche{% else %}Créer une nouvelle fiche patient{% endif %}{% endblock %}
+
+{% block content %}
+<div class="form-card">
+  <form method="POST">
+    <div class="form-grid">
+      <div class="field">
+        <label>Prénom *</label>
+        <input name="first_name" value="{{ patient.first_name if patient else '' }}" required>
+      </div>
+      <div class="field">
+        <label>Nom *</label>
+        <input name="last_name" value="{{ patient.last_name if patient else '' }}" required>
+      </div>
+      <div class="field">
+        <label>Date de naissance</label>
+        <input type="date" name="date_of_birth"
+               value="{{ patient.date_of_birth.isoformat() if patient and patient.date_of_birth else '' }}">
+      </div>
+      <div class="field">
+        <label>Sexe</label>
+        <select name="gender">
+          {% set g = patient.gender if patient else '' %}
+          <option value="">—</option>
+          <option value="F" {{ 'selected' if g == 'F' }}>Féminin</option>
+          <option value="M" {{ 'selected' if g == 'M' }}>Masculin</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Téléphone</label>
+        <input name="phone" value="{{ patient.phone if patient else '' }}" placeholder="06 12 34 56 78">
+      </div>
+      <div class="field">
+        <label>Groupe sanguin</label>
+        <select name="blood_type">
+          {% set bt = patient.blood_type if patient else '' %}
+          <option value="">—</option>
+          {% for x in ['A+','A-','B+','B-','AB+','AB-','O+','O-'] %}
+          <option {{ 'selected' if bt == x }}>{{ x }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field full">
+        <label>Adresse</label>
+        <input name="address" value="{{ patient.address if patient else '' }}"
+               placeholder="123 rue de la Santé, 75000 Paris">
+      </div>
+      <div class="field full">
+        <label>Allergies / antécédents médicaux</label>
+        <textarea name="allergies" style="min-height:80px"
+                  placeholder="Allergie pénicilline, diabète type 2…">{{ patient.allergies if patient else '' }}</textarea>
+      </div>
+      {% if not patient %}
+      <div class="field full">
+        <label>Lier à un compte patient existant (email, optionnel)</label>
+        <input type="email" name="account_email" placeholder="patient@email.com">
+        <span class="help">Le patient pourra alors consulter ses documents en ligne.</span>
+      </div>
+      {% endif %}
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn" type="submit">
+        {{ '💾 Enregistrer les modifications' if patient else '✅ Créer le patient' }}
+      </button>
+      <a class="btn btn-outline" href="{{ url_for('cabinet.patients') }}">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

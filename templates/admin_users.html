@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Utilisateurs · Administration · MediCabinet{% endblock %}
+{% block crumb %}Utilisateurs{% endblock %}
+{% block crumbsub %}Comptes du personnel créés par l'administrateur{% endblock %}
+
+{% block content %}
+<!-- Formulaire de création -->
+<div class="panel">
+  <div class="panel-head">
+    <h3>➕ Créer un compte du personnel</h3>
+  </div>
+  <div class="panel-body">
+    <form method="POST" action="{{ url_for('admin.create_user') }}" class="form-grid">
+      <div class="field">
+        <label>Email *</label>
+        <input type="email" name="email" required placeholder="dr.dupont@medicabinet.fr">
+      </div>
+      <div class="field">
+        <label>Mot de passe (12+ caractères) *</label>
+        <input type="password" name="password" required placeholder="••••••••••••">
+      </div>
+      <div class="field">
+        <label>Rôle</label>
+        <select name="role">
+          {% for r in staff_roles %}
+          <option value="{{ r }}">{{ r|capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field" style="justify-content:flex-end;align-items:flex-end">
+        <button class="btn" type="submit">Créer le compte</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Liste des comptes -->
+<div class="panel">
+  <div class="panel-head">
+    <h3>👤 Tous les comptes</h3>
+    <span style="color:var(--muted);font-size:13px">{{ users|length }} compte(s)</span>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Rôle</th>
+        <th>Statut</th>
+        <th>Créé le</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.email }}</td>
+        <td><span class="badge badge-{{ u.role }}">{{ u.role|capitalize }}</span></td>
+        <td>
+          {% if u.is_locked %}
+          <span class="badge badge-fail">🔒 Verrouillé</span>
+          {% else %}
+          <span class="badge badge-success">✅ Actif</span>
+          {% endif %}
+        </td>
+        <td class="mono">{{ u.created_at.strftime('%d/%m/%Y') }}</td>
+        <td>
+          {% if u.id != current_user.id %}
+          <form method="POST" action="{{ url_for('admin.toggle_lock', user_id=u.id) }}" style="display:inline">
+            <button class="btn btn-outline btn-sm" type="submit">
+              {{ '🔓 Déverrouiller' if u.is_locked else '🔒 Verrouiller' }}
+            </button>
+          </form>
+          {% else %}
+          <span style="color:var(--muted);font-size:12px">(votre compte)</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

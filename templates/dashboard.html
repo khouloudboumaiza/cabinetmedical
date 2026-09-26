@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% set role_labels = {'admin':'Administrateur','medecin':'Médecin','secretaire':'Secrétaire','patient':'Patient'} %}
+{% block title %}Tableau de bord · MediCabinet{% endblock %}
+{% block crumb %}Bonjour, {{ current_user.email.split('@')[0] }} 👋{% endblock %}
+{% block crumbsub %}Votre espace {{ role_labels.get(current_user.role, current_user.role) }} · MediCabinet{% endblock %}
+
+{% block content %}
+<!-- KPI Cards -->
+<div class="kpi-grid">
+  {% if current_user.role == 'patient' %}
+    <div class="kpi-card">
+      <div class="kpi-label">Mes rendez-vous à venir</div>
+      <div class="kpi-value accent">{{ stats.mes_rdv }}</div>
+      <div class="kpi-sub">Planifiés ou confirmés</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Mes dossiers médicaux</div>
+      <div class="kpi-value">{{ stats.mes_dossiers }}</div>
+      <div class="kpi-sub">Chiffrés AES-256-GCM</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Mes ordonnances</div>
+      <div class="kpi-value success">{{ stats.mes_ordonnances }}</div>
+      <div class="kpi-sub">Disponibles en ligne</div>
+    </div>
+  {% else %}
+    <div class="kpi-card">
+      <div class="kpi-label">Patients enregistrés</div>
+      <div class="kpi-value accent">{{ stats.patients }}</div>
+      <div class="kpi-sub">Fiches actives</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">RDV aujourd'hui</div>
+      <div class="kpi-value">{{ stats.rdv_today }}</div>
+      <div class="kpi-sub">Journée en cours</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">RDV 7 prochains jours</div>
+      <div class="kpi-value">{{ stats.rdv_week }}</div>
+      <div class="kpi-sub">Planning de la semaine</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Ordonnances</div>
+      <div class="kpi-value success">{{ stats.ordonnances }}</div>
+      <div class="kpi-sub">Total délivré</div>
+    </div>
+    {% if current_user.role == 'medecin' %}
+    <div class="kpi-card">
+      <div class="kpi-label">Mes RDV aujourd'hui</div>
+      <div class="kpi-value accent">{{ stats.mes_rdv_today }}</div>
+      <div class="kpi-sub">Ma journée</div>
+    </div>
+    {% endif %}
+  {% endif %}
+</div>
+
+<!-- Actions rapides -->
+{% if current_user.has_role('secretaire','medecin','admin') %}
+<div style="display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap">
+  <a class="btn" href="{{ url_for('cabinet.appointment_new') }}">+ Nouveau rendez-vous</a>
+  {% if current_user.has_role('secretaire','admin') %}
+  <a class="btn btn-outline" href="{{ url_for('cabinet.patient_new') }}">+ Nouveau patient</a>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Prochains RDV -->
+<div class="panel">
+  <div class="panel-head">
+    <h3>{% if current_user.role == 'patient' %}Mes prochains rendez-vous{% else %}Prochains rendez-vous{% endif %}</h3>
+    <a class="link" href="{{ url_for('cabinet.appointments') }}">Tout voir →</a>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Patient</th>
+        <th>Médecin</th>
+        <th>Motif</th>
+        <th>Statut</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rdv in upcoming %}
+      <tr>
+        <td class="mono">{{ rdv.scheduled_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td>{{ rdv.patient.full_name }}</td>
+        <td>{{ rdv.medecin.email }}</td>
+        <td>{{ rdv.motif }}</td>
+        <td><span class="badge badge-{{ rdv.status }}">{{ rdv.status|replace('planifie','Planifié')|replace('confirme','Confirmé')|replace('termine','Terminé')|replace('annule','Annulé') }}</span></td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" style="color:var(--muted);text-align:center;padding:30px">
+          Aucun rendez-vous à venir.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

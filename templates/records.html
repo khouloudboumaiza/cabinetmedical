@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Dossiers médicaux · {{ patient.full_name }} · MediCabinet{% endblock %}
+{% block crumb %}Dossiers médicaux{% endblock %}
+{% block crumbsub %}Patient : {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<div class="encrypt-note">
+  🔒 Contenus chiffrés AES-256-GCM — jamais stockés en clair dans la base de données.
+</div>
+
+<div class="page-head">
+  <div>
+    <h2>Dossiers médicaux</h2>
+    <p>Patient : <strong>{{ patient.full_name }}</strong></p>
+  </div>
+  <div style="display:flex;gap:8px">
+    {% if current_user.has_role('medecin','admin') %}
+    <a class="btn" href="{{ url_for('cabinet.record_new', patient_id=patient.id) }}">
+      + Nouveau dossier
+    </a>
+    {% endif %}
+    <a class="btn btn-outline" href="{{ url_for('cabinet.patient_detail', patient_id=patient.id) }}">
+      ← Fiche patient
+    </a>
+  </div>
+</div>
+
+<div class="panel">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Titre</th>
+        <th>Médecin</th>
+        <th>Date de création</th>
+        <th style="text-align:right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td><strong>{{ r.title }}</strong></td>
+        <td>{{ r.medecin.email }}</td>
+        <td class="mono">{{ r.created_at.strftime('%d/%m/%Y à %H:%M') }}</td>
+        <td style="text-align:right">
+          <a class="btn btn-outline btn-sm" href="{{ url_for('cabinet.record_view', record_id=r.id) }}">
+            🔓 Ouvrir
+          </a>
+          {% if current_user.is_admin() or (current_user.role == 'medecin' and r.medecin_id == current_user.id) %}
+          <form method="POST" action="{{ url_for('cabinet.record_delete', record_id=r.id) }}"
+                style="display:inline"
+                onsubmit="return confirm('Supprimer ce dossier médical ? Action irréversible.')">
+            <button class="btn btn-danger btn-sm" type="submit">🗑</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="4" style="color:var(--muted);text-align:center;padding:40px">
+          Aucun dossier médical enregistré.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

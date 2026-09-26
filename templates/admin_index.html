@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Administration · MediCabinet{% endblock %}
+{% block crumb %}Administration{% endblock %}
+{% block crumbsub %}Supervision sécurité & activité du cabinet{% endblock %}
+
+{% block content %}
+<!-- KPI sécurité -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Utilisateurs totaux</div>
+    <div class="kpi-value">{{ total_users }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Connexions (24h)</div>
+    <div class="kpi-value accent">{{ logins_24h }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Échecs (24h)</div>
+    <div class="kpi-value {{ 'danger' if failed_24h > 0 else 'success' }}">{{ failed_24h }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Alertes ouvertes</div>
+    <div class="kpi-value {{ 'warning' if open_alerts > 0 else 'success' }}">{{ open_alerts }}</div>
+  </div>
+</div>
+
+<!-- Graphique alertes -->
+<div class="panel">
+  <div class="panel-head">
+    <h3>📊 Alertes par type</h3>
+    <a class="link" href="{{ url_for('admin.alerts') }}">Tout voir →</a>
+  </div>
+  <div class="panel-pad">
+    <canvas id="alertsChart" height="80"></canvas>
+  </div>
+</div>
+
+<!-- Alertes récentes -->
+<div class="panel">
+  <div class="panel-head">
+    <h3>🚨 Alertes récentes</h3>
+    <a class="link" href="{{ url_for('admin.alerts') }}">Tout voir →</a>
+  </div>
+  <table class="table">
+    <thead>
+      <tr><th>Date</th><th>Type</th><th>Utilisateur</th><th>Détails</th><th>Statut</th></tr>
+    </thead>
+    <tbody>
+      {% for a in recent_alerts %}
+      <tr>
+        <td class="mono">{{ a.timestamp.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td><span class="badge badge-fail">{{ a.alert_type }}</span></td>
+        <td>{{ a.user.email if a.user else '—' }}</td>
+        <td>{{ a.details }}</td>
+        <td>
+          {% if a.resolved %}
+          <span class="badge badge-success">Résolue</span>
+          {% else %}
+          <span class="badge badge-planifie">Ouverte</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" style="color:var(--success);text-align:center;padding:20px">
+          ✅ Aucune alerte — tout est normal.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+new Chart(document.getElementById('alertsChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ alert_labels|tojson }},
+    datasets: [{
+      data: {{ alert_values|tojson }},
+      backgroundColor: '#0d9488',
+      borderRadius: 8,
+      label: 'Alertes'
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+  }
+});
+</script>
+{% endblock %}

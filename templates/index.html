@@ -1,0 +1,1325 @@
+{% extends "base.html" %}
+{% block title %}MediCabinet — Votre cabinet médical en ligne{% endblock %}
+
+{% block guest %}
+<nav class="lp-nav">
+  <div class="lp-nav-inner">
+    <div class="lp-brand">
+      <div class="lp-brand-logo">+</div>
+      <div>
+        <div class="lp-brand-name">MediCabinet</div>
+        <div class="lp-brand-tagline">Cabinet médical numérique</div>
+      </div>
+    </div>
+    <div class="lp-nav-links">
+      <a href="#services">Services</a>
+      <a href="#fonctionnement">Comment ça marche</a>
+      <a href="#praticiens">Praticiens</a>
+      <a href="#securite">Sécurité</a>
+    </div>
+    <div class="lp-nav-actions">
+      <a href="#" onclick="openAuthModal('login'); return false;" class="lp-btn-ghost">Se connecter</a>
+      <a href="#" onclick="openAuthModal('register'); return false;" class="lp-btn-primary">Créer mon espace</a>
+    </div>
+    <button class="lp-burger" id="burgerBtn" onclick="toggleMenu()">☰</button>
+  </div>
+  <div class="lp-mobile-menu" id="mobileMenu">
+    <a href="#services">Services</a>
+    <a href="#fonctionnement">Comment ça marche</a>
+    <a href="#praticiens">Praticiens</a>
+    <a href="#" onclick="openAuthModal('login'); return false;">Se connecter</a>
+    <a href="#" onclick="openAuthModal('register'); return false;" class="lp-btn-primary" style="text-align:center">Créer mon espace</a>
+  </div>
+</nav>
+
+<!-- ============================================================
+     FLASH MESSAGES
+============================================================ -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div style="max-width:1100px;margin:16px auto 0;padding:0 24px;">
+    {% for cat, msg in messages %}
+    <div class="flash flash-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+<!-- ============================================================
+     URGENCES BANNER
+============================================================ -->
+
+
+<!-- ============================================================
+     HERO
+============================================================ -->
+<section class="lp-hero">
+  <div class="lp-hero-inner">
+    <div class="lp-hero-text">
+      <div class="lp-badge">🏥 Plateforme médicale sécurisée</div>
+      <h1>
+        Votre <span>cabinet médical</span><br>à portée de main
+      </h1>
+      <p>
+        Prenez rendez-vous, consultez vos dossiers médicaux chiffrés,
+        accédez à vos ordonnances et communiquez avec votre équipe médicale —
+        tout en sécurité, à tout moment.
+      </p>
+      <div class="lp-hero-ctas">
+        <a href="#" onclick="openAuthModal('register'); return false;" class="lp-btn-primary lp-btn-lg">
+          Créer mon espace patient →
+        </a>
+        <a href="#" onclick="openAuthModal('login'); return false;" class="lp-btn-outline-dark">
+          J'ai déjà un compte
+        </a>
+      </div>
+      <div class="lp-hero-trust">
+        <div class="lp-trust-item">
+          <span class="lp-trust-icon">🔒</span>
+          <span>Données chiffrées AES-256</span>
+        </div>
+        <div class="lp-trust-item">
+          <span class="lp-trust-icon">✅</span>
+          <span>Conforme RGPD</span>
+        </div>
+        <div class="lp-trust-item">
+          <span class="lp-trust-icon">⚡</span>
+          <span>Accès instantané</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="lp-hero-visual">
+      <!-- Carte principal (prochain RDV) -->
+      <div class="lp-phone-card lp-card-rdv">
+        <div class="lp-card-header">
+          <span class="lp-card-badge-confirm">Confirmé</span>
+          <span style="font-size:12px;color:#64748b">Prochain rendez-vous</span>
+        </div>
+        <div class="lp-doctor-row">
+          <div class="lp-doc-avatar">👨‍⚕️</div>
+          <div>
+            <div class="lp-doc-name">Dr. Hélène Martin</div>
+            <div class="lp-doc-spec">Médecin Généraliste</div>
+            <div class="lp-doc-addr">Cabinet Saint-Honoré · Étage 2</div>
+          </div>
+        </div>
+        <div class="lp-rdv-time-row">
+          <div class="lp-rdv-time-item">
+            <span>📅</span> Vendredi 24 Octobre
+          </div>
+          <div class="lp-rdv-time-item">
+            <span>🕙</span> 10h30
+          </div>
+        </div>
+        <div class="lp-rdv-actions">
+          <button class="lp-rdv-btn-outline">🗺 Itinéraire</button>
+          <button class="lp-rdv-btn-dark">⚙ Gérer</button>
+        </div>
+      </div>
+
+      <!-- Carte notifications -->
+      <div class="lp-phone-card lp-card-notif">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;background:#dcfce7;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px">💊</div>
+          <div>
+            <div style="font-weight:700;font-size:13px">Ordonnance prête</div>
+            <div style="font-size:11.5px;color:#64748b">Renouvellement disponible</div>
+          </div>
+          <span style="margin-left:auto;font-size:11px;color:#94a3b8">Il y a 2h</span>
+        </div>
+      </div>
+
+      <!-- Carte analyse -->
+      <div class="lp-phone-card lp-card-analyse">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;background:#dbeafe;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px">🔬</div>
+          <div>
+            <div style="font-weight:700;font-size:13px">Résultats d'analyses</div>
+            <div style="font-size:11.5px;color:#64748b">Biologie · Disponibles</div>
+          </div>
+          <span style="margin-left:auto;font-size:20px;color:#0d9488">↓</span>
+        </div>
+      </div>
+
+      <!-- Décoration -->
+      <div class="lp-hero-circle lp-circle-1"></div>
+      <div class="lp-hero-circle lp-circle-2"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     STATS
+============================================================ -->
+<section class="lp-stats">
+  <div class="lp-container">
+    <div class="lp-stats-grid">
+      <div class="lp-stat-item">
+        <div class="lp-stat-value">500<span>+</span></div>
+        <div class="lp-stat-label">Patients actifs</div>
+      </div>
+      <div class="lp-stat-divider"></div>
+      <div class="lp-stat-item">
+        <div class="lp-stat-value">12</div>
+        <div class="lp-stat-label">Praticiens</div>
+      </div>
+      <div class="lp-stat-divider"></div>
+      <div class="lp-stat-item">
+        <div class="lp-stat-value">98<span>%</span></div>
+        <div class="lp-stat-label">Satisfaction patient</div>
+      </div>
+      <div class="lp-stat-divider"></div>
+      <div class="lp-stat-item">
+        <div class="lp-stat-value">24<span>/7</span></div>
+        <div class="lp-stat-label">Accès à vos données</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SERVICES RAPIDES
+============================================================ -->
+<section class="lp-section" id="services">
+  <div class="lp-container">
+    <div class="lp-section-head">
+      <div class="lp-section-badge">Services rapides</div>
+      <h2>Tout ce dont vous avez besoin,<br>en un seul endroit</h2>
+      <p>Accédez à tous vos services médicaux sans délai,<br>depuis n'importe quel appareil.</p>
+    </div>
+
+    <div class="lp-services-grid">
+      <div class="lp-service-card lp-service-teal">
+        <div class="lp-service-icon">📅</div>
+        <h3>Prendre RDV</h3>
+        <p>En cabinet ou en téléconsultation, choisissez le créneau qui vous convient.</p>
+        <span class="lp-service-arrow">→</span>
+      </div>
+      <div class="lp-service-card lp-service-blue">
+        <div class="lp-service-icon">💊</div>
+        <h3>Mes Ordonnances</h3>
+        <p>Consultez et téléchargez vos ordonnances. Renouvellement simplifié.</p>
+        <span class="lp-service-arrow">→</span>
+      </div>
+      <div class="lp-service-card lp-service-orange">
+        <div class="lp-service-icon">🔬</div>
+        <h3>Résultats d'analyses</h3>
+        <p>Accédez à vos résultats biologiques et d'imagerie dès leur disponibilité.</p>
+        <span class="lp-service-arrow">→</span>
+      </div>
+      <div class="lp-service-card lp-service-purple">
+        <div class="lp-service-icon">💻</div>
+        <h3>Téléconsultation</h3>
+        <p>Consultez votre médecin à distance, salle d'attente virtuelle incluse.</p>
+        <span class="lp-service-arrow">→</span>
+      </div>
+      <div class="lp-service-card lp-service-green">
+        <div class="lp-service-icon">📋</div>
+        <h3>Dossier médical</h3>
+        <p>Votre historique médical complet, chiffré AES-256-GCM, accessible en sécurité.</p>
+        <span class="lp-service-arrow">→</span>
+      </div>
+      <div class="lp-service-card lp-service-pink">
+        <div class="lp-service-icon">💬</div>
+        <h3>Messagerie sécurisée</h3>
+        <p>Échangez directement avec votre équipe médicale de manière confidentielle.</p>
+        <span class="lp-service-arrow">→</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     COMMENT ÇA MARCHE
+============================================================ -->
+<section class="lp-section lp-section-alt" id="fonctionnement">
+  <div class="lp-container">
+    <div class="lp-section-head">
+      <div class="lp-section-badge">Simple & rapide</div>
+      <h2>Commencez en 3 étapes</h2>
+      <p>Rejoignez votre cabinet médical numérique en quelques minutes.</p>
+    </div>
+    <div class="lp-steps-grid">
+      <div class="lp-step">
+        <div class="lp-step-number">1</div>
+        <div class="lp-step-icon">👤</div>
+        <h3>Créez votre espace</h3>
+        <p>Inscrivez-vous gratuitement en 2 minutes avec votre email ou votre compte Google.</p>
+      </div>
+      <div class="lp-step-arrow">→</div>
+      <div class="lp-step">
+        <div class="lp-step-number">2</div>
+        <div class="lp-step-icon">🔗</div>
+        <h3>Reliez votre dossier</h3>
+        <p>La secrétaire médicale associe votre espace à votre fiche patient du cabinet.</p>
+      </div>
+      <div class="lp-step-arrow">→</div>
+      <div class="lp-step">
+        <div class="lp-step-number">3</div>
+        <div class="lp-step-icon">✅</div>
+        <h3>Accédez à tout</h3>
+        <p>RDV, dossiers, ordonnances, résultats — tout est disponible immédiatement.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PRATICIENS
+============================================================ -->
+<section class="lp-section" id="praticiens">
+  <div class="lp-container">
+    <div class="lp-section-head">
+      <div class="lp-section-badge">Vos praticiens</div>
+      <h2>Une équipe médicale complète<br>à votre service</h2>
+      <p>Des spécialistes qualifiés vous accompagnent au quotidien.</p>
+    </div>
+    <div class="lp-doctors-grid">
+      <div class="lp-doctor-card">
+        <div class="lp-doctor-photo" style="background:linear-gradient(135deg,#0d9488,#14b8a6)">
+          <span>👨‍⚕️</span>
+        </div>
+        <div class="lp-doctor-name">Dr. Mercier</div>
+        <div class="lp-doctor-spec">Cardiologue</div>
+        <a href="#" onclick="openAuthModal('register'); return false;" class="lp-doctor-btn">Prendre RDV</a>
+      </div>
+      <div class="lp-doctor-card">
+        <div class="lp-doctor-photo" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa)">
+          <span>👩‍⚕️</span>
+        </div>
+        <div class="lp-doctor-name">Dr. Bernard</div>
+        <div class="lp-doctor-spec">Dermatologue</div>
+        <a href="#" onclick="openAuthModal('register'); return false;" class="lp-doctor-btn">Prendre RDV</a>
+      </div>
+      <div class="lp-doctor-card">
+        <div class="lp-doctor-photo" style="background:linear-gradient(135deg,#f59e0b,#fbbf24)">
+          <span>🧑‍⚕️</span>
+        </div>
+        <div class="lp-doctor-name">A. Robert</div>
+        <div class="lp-doctor-spec">Kinésithérapeute</div>
+        <a href="#" onclick="openAuthModal('register'); return false;" class="lp-doctor-btn">Prendre RDV</a>
+      </div>
+      <div class="lp-doctor-card">
+        <div class="lp-doctor-photo" style="background:linear-gradient(135deg,#ef4444,#f87171)">
+          <span>👩‍⚕️</span>
+        </div>
+        <div class="lp-doctor-name">Dr. Martin</div>
+        <div class="lp-doctor-spec">Médecin Généraliste</div>
+        <a href="#" onclick="openAuthModal('register'); return false;" class="lp-doctor-btn">Prendre RDV</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SÉCURITÉ
+============================================================ -->
+<section class="lp-section lp-section-dark" id="securite">
+  <div class="lp-container">
+    <div class="lp-security-grid">
+      <div class="lp-security-text">
+        <div class="lp-section-badge lp-badge-light">🔒 Sécurité maximale</div>
+        <h2 style="color:#fff">Vos données médicales<br>protégées à chaque instant</h2>
+        <p style="color:#94a3b8">
+          Votre confidentialité est notre priorité absolue. Toutes les données médicales
+          sont chiffrées avec des standards militaires avant d'être stockées.
+        </p>
+        <div class="lp-security-features">
+          <div class="lp-sec-feat">
+            <div class="lp-sec-icon">🔐</div>
+            <div>
+              <strong>AES-256-GCM</strong>
+              <p>Chiffrement symétrique authentifié — dossiers et ordonnances jamais en clair en base de données</p>
+            </div>
+          </div>
+          <div class="lp-sec-feat">
+            <div class="lp-sec-icon">🛡</div>
+            <div>
+              <strong>HMAC-SHA256</strong>
+              <p>Logs de connexion chaînés cryptographiquement — toute falsification est détectée</p>
+            </div>
+          </div>
+          <div class="lp-sec-feat">
+            <div class="lp-sec-icon">🔑</div>
+            <div>
+              <strong>Bcrypt + OAuth2 Google</strong>
+              <p>Mots de passe hachés, détection d'anomalies, verrouillage anti brute-force</p>
+            </div>
+          </div>
+          <div class="lp-sec-feat">
+            <div class="lp-sec-icon">📋</div>
+            <div>
+              <strong>RBAC strict</strong>
+              <p>4 rôles avec contrôle d'accès côté serveur — aucune donnée exposée sans autorisation</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="lp-security-visual">
+        <div class="lp-sec-card">
+          <div class="lp-sec-card-header">
+            <span>🔒</span> Dossier médical chiffré
+          </div>
+          <div class="lp-sec-card-body">
+            <div class="lp-sec-row">
+              <span class="lp-sec-label">Algorithme</span>
+              <span class="lp-sec-val lp-code">AES-256-GCM</span>
+            </div>
+            <div class="lp-sec-row">
+              <span class="lp-sec-label">Nonce</span>
+              <span class="lp-sec-val lp-code">96 bits aléatoires</span>
+            </div>
+            <div class="lp-sec-row">
+              <span class="lp-sec-label">Stockage</span>
+              <span class="lp-sec-val" style="color:#16a34a">✓ Chiffré</span>
+            </div>
+            <div class="lp-sec-row">
+              <span class="lp-sec-label">En clair en base</span>
+              <span class="lp-sec-val" style="color:#dc2626">✗ Jamais</span>
+            </div>
+            <div class="lp-sec-encrypted">
+              <span style="font-size:10px;color:#64748b;display:block;margin-bottom:4px">Données stockées :</span>
+              <code>jK8mNpR3x+VzW0...aBcDeFgHiJkLmN</code>
+            </div>
+          </div>
+        </div>
+        <div class="lp-sec-badge-row">
+          <div class="lp-sec-badge">✓ RGPD</div>
+          <div class="lp-sec-badge">✓ HDS</div>
+          <div class="lp-sec-badge">✓ Chiffré</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     ROLES
+============================================================ -->
+<section class="lp-section">
+  <div class="lp-container">
+    <div class="lp-section-head">
+      <div class="lp-section-badge">4 espaces dédiés</div>
+      <h2>Un accès adapté à chaque rôle</h2>
+      <p>Des permissions strictes côté serveur garantissent que chacun<br>accède uniquement à ce qui le concerne.</p>
+    </div>
+    <div class="lp-roles-grid">
+      <div class="lp-role-card lp-role-admin">
+        <div class="lp-role-icon">👑</div>
+        <h3>Administrateur</h3>
+        <ul>
+          <li>Supervision sécurité</li>
+          <li>Gestion des comptes</li>
+          <li>Logs & alertes HMAC</li>
+          <li>Tableau de bord global</li>
+        </ul>
+        <div class="lp-role-tag">Accès restreint</div>
+      </div>
+      <div class="lp-role-card lp-role-medecin">
+        <div class="lp-role-icon">🩺</div>
+        <h3>Médecin</h3>
+        <ul>
+          <li>Dossiers médicaux chiffrés</li>
+          <li>Rédaction ordonnances</li>
+          <li>Gestion des consultations</li>
+          <li>Historique patient complet</li>
+        </ul>
+        <div class="lp-role-tag">Espace médical</div>
+      </div>
+      <div class="lp-role-card lp-role-secretaire">
+        <div class="lp-role-icon">📞</div>
+        <h3>Secrétaire</h3>
+        <ul>
+          <li>Gestion des patients</li>
+          <li>Planning & rendez-vous</li>
+          <li>Fiches d'information</li>
+          <li>Coordination agenda</li>
+        </ul>
+        <div class="lp-role-tag">Espace accueil</div>
+      </div>
+      <div class="lp-role-card lp-role-patient">
+        <div class="lp-role-icon">🧑</div>
+        <h3>Patient</h3>
+        <ul>
+          <li>Mes rendez-vous</li>
+          <li>Mes dossiers & résultats</li>
+          <li>Mes ordonnances</li>
+          <li>Inscription libre</li>
+        </ul>
+        <div class="lp-role-tag lp-role-tag-green">Inscription gratuite</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     CTA FINAL
+============================================================ -->
+<section class="lp-cta">
+  <div class="lp-container">
+    <div class="lp-cta-inner">
+      <div class="lp-cta-content">
+        <h2>Prêt à rejoindre votre<br>cabinet médical numérique ?</h2>
+        <p>Créez votre espace patient gratuitement en 2 minutes.</p>
+        <div class="lp-cta-actions">
+          <a href="#" onclick="openAuthModal('register'); return false;" class="lp-btn-primary lp-btn-lg">
+            Créer mon espace patient →
+          </a>
+          <a href="#" onclick="openAuthModal('login'); return false;" class="lp-btn-ghost-white">
+            J'ai déjà un compte
+          </a>
+        </div>
+      </div>
+      <div class="lp-cta-visual">
+        <div class="lp-cta-pill">📅 Rendez-vous confirmé</div>
+        <div class="lp-cta-pill">💊 Ordonnance disponible</div>
+        <div class="lp-cta-pill">🔬 Résultats reçus</div>
+        <div class="lp-cta-pill">🔒 Données sécurisées</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FOOTER
+============================================================ -->
+<footer class="lp-footer">
+  <div class="lp-container">
+    <div class="lp-footer-grid">
+      <div class="lp-footer-brand">
+        <div class="lp-footer-logo">
+          <div class="lp-brand-logo" style="width:34px;height:34px;font-size:18px">+</div>
+          <span class="lp-brand-name">MediCabinet</span>
+        </div>
+        <p>Plateforme médicale numérique sécurisée — vos données protégées à chaque instant.</p>
+        <div class="lp-footer-badges">
+          <span>🔒 AES-256</span>
+          <span>✅ RGPD</span>
+          <span>🛡 HMAC</span>
+        </div>
+      </div>
+      <div class="lp-footer-col">
+        <h4>Services</h4>
+        <a href="#">Rendez-vous</a>
+        <a href="#">Dossiers médicaux</a>
+        <a href="#">Ordonnances</a>
+        <a href="#">Téléconsultation</a>
+      </div>
+      <div class="lp-footer-col">
+        <h4>Espaces</h4>
+        <a href="#" onclick="openAuthModal('login'); return false;">Espace patient</a>
+        <a href="#" onclick="openAuthModal('login'); return false;">Espace médecin</a>
+        <a href="#" onclick="openAuthModal('login'); return false;">Espace secrétaire</a>
+        <a href="#" onclick="openAuthModal('login'); return false;">Administration</a>
+      </div>
+      <div class="lp-footer-col">
+        <h4>Informations</h4>
+        <a href="#">Politique de confidentialité</a>
+        <a href="#">Mentions légales</a>
+        <a href="#">Sécurité</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+    <div class="lp-footer-bottom">
+      <span>© 2026 MediCabinet — Tous droits réservés</span>
+      <span>Fait avec ❤️ pour votre santé</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================================================
+     STYLES LANDING PAGE
+============================================================ -->
+<style>
+/* ─── Reset & Variables ─── */
+:root {
+  --lp-teal:    #0d9488;
+  --lp-teal-d:  #0f766e;
+  --lp-teal-s:  #ccfbf1;
+  --lp-ink:     #0f172a;
+  --lp-muted:   #64748b;
+  --lp-border:  #e2e8f0;
+  --lp-bg:      #f8fafc;
+  --lp-card:    #fff;
+  --lp-shadow:  0 1px 3px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.08);
+  --lp-shadow-lg: 0 20px 60px rgba(15,23,42,.15);
+  --lp-r:       16px;
+  --font:       'Inter', system-ui, sans-serif;
+}
+
+body { background: #fff; }
+
+/* ─── Nav ─── */
+.lp-nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--lp-border);
+}
+
+.lp-nav-inner {
+  max-width: 1200px; margin: 0 auto;
+  padding: 0 32px;
+  height: 68px;
+  display: flex; align-items: center; gap: 32px;
+}
+
+.lp-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
+.lp-brand-logo {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+  color: #fff; font-size: 22px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(13,148,136,.35);
+  flex-shrink: 0;
+}
+.lp-brand-name    { font-size: 16px; font-weight: 800; color: var(--lp-ink); }
+.lp-brand-tagline { font-size: 10.5px; color: var(--lp-muted); }
+
+.lp-nav-links { display: flex; gap: 28px; margin-left: auto; }
+.lp-nav-links a { font-size: 14px; font-weight: 500; color: var(--lp-muted); text-decoration: none; transition: color .15s; }
+.lp-nav-links a:hover { color: var(--lp-ink); }
+
+.lp-nav-actions { display: flex; gap: 10px; align-items: center; }
+
+.lp-btn-ghost {
+  font-size: 14px; font-weight: 600; color: var(--lp-ink);
+  text-decoration: none; padding: 8px 16px; border-radius: 10px;
+  transition: background .15s;
+}
+.lp-btn-ghost:hover { background: var(--lp-bg); }
+
+.lp-btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--lp-teal); color: #fff;
+  padding: 10px 20px; border-radius: 12px;
+  font-size: 14px; font-weight: 700;
+  text-decoration: none; border: none; cursor: pointer;
+  transition: background .15s, transform .15s, box-shadow .15s;
+  box-shadow: 0 4px 14px rgba(13,148,136,.3);
+}
+.lp-btn-primary:hover { background: var(--lp-teal-d); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(13,148,136,.4); }
+
+.lp-btn-lg { padding: 14px 28px; font-size: 16px; border-radius: 14px; }
+
+.lp-btn-outline-dark {
+  display: inline-flex; align-items: center;
+  background: #fff; color: var(--lp-ink);
+  padding: 14px 24px; border-radius: 14px;
+  font-size: 15px; font-weight: 600;
+  text-decoration: none;
+  border: 2px solid var(--lp-border);
+  transition: border-color .15s, background .15s;
+}
+.lp-btn-outline-dark:hover { border-color: var(--lp-teal); background: var(--lp-teal-s); }
+
+.lp-burger { display: none; background: none; border: none; font-size: 22px; cursor: pointer; margin-left: auto; }
+
+.lp-mobile-menu {
+  display: none; flex-direction: column; gap: 4px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--lp-border);
+  background: #fff;
+}
+.lp-mobile-menu.open { display: flex; }
+.lp-mobile-menu a { padding: 10px 4px; font-size: 15px; font-weight: 500; color: var(--lp-ink); text-decoration: none; }
+
+/* ─── Urgences Banner ─── */
+.urg-banner { background: linear-gradient(90deg, #fff7ed, #fef3c7); border-bottom: 1px solid #fde68a; }
+.urg-inner {
+  max-width: 1200px; margin: 0 auto;
+  padding: 12px 32px;
+  display: flex; align-items: center; gap: 14px;
+}
+.urg-icon { font-size: 22px; }
+.urg-text { flex: 1; }
+.urg-text strong { font-size: 14px; font-weight: 700; color: #92400e; display: block; }
+.urg-text span   { font-size: 12.5px; color: #b45309; }
+.urg-btn {
+  background: #ea580c; color: #fff;
+  padding: 8px 20px; border-radius: 10px;
+  font-size: 14px; font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(234,88,12,.3);
+  transition: background .15s;
+  white-space: nowrap;
+}
+.urg-btn:hover { background: #c2410c; }
+
+/* ─── Hero ─── */
+.lp-hero {
+  background: linear-gradient(160deg, #f0fdf9 0%, #f8fafc 60%, #eff6ff 100%);
+  padding: 80px 32px 90px;
+  overflow: hidden;
+  position: relative;
+}
+
+.lp-hero::before {
+  content: '';
+  position: absolute; top: -100px; right: -100px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(13,148,136,.08) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.lp-hero-inner {
+  max-width: 1200px; margin: 0 auto;
+  display: flex; align-items: center; gap: 60px;
+}
+
+.lp-hero-text { flex: 1; max-width: 560px; }
+
+.lp-badge {
+  display: inline-block;
+  background: var(--lp-teal-s); color: var(--lp-teal-d);
+  padding: 6px 16px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 700;
+  margin-bottom: 20px;
+  border: 1px solid rgba(13,148,136,.2);
+}
+
+.lp-hero-text h1 {
+  font-size: 48px; font-weight: 800; line-height: 1.12;
+  color: var(--lp-ink); margin-bottom: 18px;
+}
+.lp-hero-text h1 span { color: var(--lp-teal); }
+
+.lp-hero-text p {
+  font-size: 17px; line-height: 1.75; color: var(--lp-muted);
+  margin-bottom: 32px;
+}
+
+.lp-hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 32px; }
+
+.lp-hero-trust { display: flex; gap: 24px; flex-wrap: wrap; }
+.lp-trust-item { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--lp-muted); font-weight: 500; }
+.lp-trust-icon { font-size: 16px; }
+
+/* Hero visual (mockup cards) */
+.lp-hero-visual {
+  flex: 1; position: relative;
+  min-height: 420px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.lp-phone-card {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: var(--lp-shadow-lg);
+  padding: 20px;
+  position: absolute;
+}
+
+.lp-card-rdv {
+  width: 320px;
+  right: 0; top: 20px;
+  border: 1px solid var(--lp-border);
+}
+
+.lp-card-notif {
+  width: 260px;
+  left: -10px; top: 60px;
+  border: 1px solid var(--lp-border);
+  animation: float 4s ease-in-out infinite;
+}
+
+.lp-card-analyse {
+  width: 240px;
+  left: 20px; bottom: 20px;
+  border: 1px solid var(--lp-border);
+  animation: float 4s ease-in-out infinite 1.5s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+.lp-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.lp-card-badge-confirm { background: #dcfce7; color: #16a34a; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+
+.lp-doctor-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+.lp-doc-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg,#0d9488,#14b8a6); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.lp-doc-name   { font-size: 15px; font-weight: 700; color: var(--lp-ink); }
+.lp-doc-spec   { font-size: 12.5px; color: var(--lp-teal); font-weight: 600; }
+.lp-doc-addr   { font-size: 11.5px; color: var(--lp-muted); margin-top: 2px; }
+
+.lp-rdv-time-row { display: flex; gap: 10px; margin-bottom: 14px; }
+.lp-rdv-time-item { flex: 1; background: #f8fafc; border: 1px solid var(--lp-border); border-radius: 10px; padding: 8px 10px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+
+.lp-rdv-actions { display: flex; gap: 8px; }
+.lp-rdv-btn-outline { flex: 1; padding: 9px; border: 1px solid var(--lp-border); border-radius: 10px; background: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.lp-rdv-btn-dark    { flex: 1; padding: 9px; background: #0f172a; color: #fff; border: none; border-radius: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+
+.lp-hero-circle { position: absolute; border-radius: 50%; }
+.lp-circle-1 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(13,148,136,.06), transparent); top: -50px; right: -50px; }
+.lp-circle-2 { width: 200px; height: 200px; background: radial-gradient(circle, rgba(99,102,241,.06), transparent); bottom: 0; left: 0; }
+
+/* ─── Stats ─── */
+.lp-stats {
+  background: var(--lp-teal);
+  padding: 36px 32px;
+}
+
+.lp-stats-grid {
+  max-width: 900px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: center; gap: 0;
+  flex-wrap: wrap;
+}
+
+.lp-stat-item { text-align: center; padding: 16px 48px; }
+.lp-stat-value { font-size: 36px; font-weight: 800; color: #fff; line-height: 1; }
+.lp-stat-value span { font-size: 22px; }
+.lp-stat-label { font-size: 13px; color: rgba(255,255,255,.75); margin-top: 4px; font-weight: 500; }
+
+.lp-stat-divider { width: 1px; height: 48px; background: rgba(255,255,255,.2); }
+
+/* ─── Section base ─── */
+.lp-section     { padding: 96px 32px; }
+.lp-section-alt { background: var(--lp-bg); padding: 96px 32px; }
+.lp-container   { max-width: 1200px; margin: 0 auto; }
+
+.lp-section-head { text-align: center; margin-bottom: 60px; }
+.lp-section-badge {
+  display: inline-block;
+  background: var(--lp-teal-s); color: var(--lp-teal-d);
+  padding: 6px 16px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 700;
+  margin-bottom: 16px;
+  border: 1px solid rgba(13,148,136,.2);
+}
+.lp-section-head h2 { font-size: 36px; font-weight: 800; color: var(--lp-ink); margin-bottom: 14px; line-height: 1.25; }
+.lp-section-head p  { font-size: 17px; color: var(--lp-muted); line-height: 1.7; }
+
+/* ─── Services ─── */
+.lp-services-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.lp-service-card {
+  border-radius: var(--lp-r);
+  padding: 28px 24px;
+  position: relative;
+  overflow: hidden;
+  transition: transform .2s, box-shadow .2s;
+  cursor: pointer;
+}
+.lp-service-card:hover { transform: translateY(-4px); box-shadow: var(--lp-shadow-lg); }
+
+.lp-service-teal   { background: linear-gradient(135deg, #f0fdf9, #ccfbf1); border: 1px solid #99f6e4; }
+.lp-service-blue   { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #93c5fd; }
+.lp-service-orange { background: linear-gradient(135deg, #fff7ed, #fed7aa); border: 1px solid #fdba74; }
+.lp-service-purple { background: linear-gradient(135deg, #faf5ff, #ede9fe); border: 1px solid #c4b5fd; }
+.lp-service-green  { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1px solid #86efac; }
+.lp-service-pink   { background: linear-gradient(135deg, #fff1f2, #ffe4e6); border: 1px solid #fda4af; }
+
+.lp-service-icon { font-size: 32px; margin-bottom: 14px; }
+.lp-service-card h3 { font-size: 16px; font-weight: 700; color: var(--lp-ink); margin-bottom: 8px; }
+.lp-service-card p  { font-size: 13.5px; color: var(--lp-muted); line-height: 1.6; }
+.lp-service-arrow { position: absolute; bottom: 20px; right: 20px; font-size: 18px; color: var(--lp-teal); font-weight: 700; }
+
+/* ─── Steps (Comment ça marche) ─── */
+.lp-steps-grid {
+  display: flex; align-items: flex-start; justify-content: center; gap: 16px;
+  flex-wrap: wrap;
+}
+
+.lp-step {
+  flex: 1; min-width: 200px; max-width: 280px;
+  background: #fff; border: 1px solid var(--lp-border);
+  border-radius: var(--lp-r);
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: var(--lp-shadow);
+  position: relative;
+}
+
+.lp-step-number {
+  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  width: 28px; height: 28px;
+  background: var(--lp-teal); color: #fff;
+  border-radius: 50%; font-size: 13px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.lp-step-icon { font-size: 40px; margin-bottom: 14px; }
+.lp-step h3   { font-size: 16px; font-weight: 700; color: var(--lp-ink); margin-bottom: 8px; }
+.lp-step p    { font-size: 13.5px; color: var(--lp-muted); line-height: 1.6; }
+.lp-step-arrow { font-size: 28px; color: #cbd5e1; align-self: center; flex-shrink: 0; font-weight: 300; }
+
+/* ─── Doctors ─── */
+.lp-doctors-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+}
+
+.lp-doctor-card {
+  background: #fff; border: 1px solid var(--lp-border);
+  border-radius: var(--lp-r);
+  padding: 28px 20px;
+  text-align: center;
+  box-shadow: var(--lp-shadow);
+  transition: transform .2s, box-shadow .2s;
+}
+.lp-doctor-card:hover { transform: translateY(-4px); box-shadow: var(--lp-shadow-lg); }
+
+.lp-doctor-photo {
+  width: 72px; height: 72px; border-radius: 50%;
+  margin: 0 auto 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+}
+.lp-doctor-name { font-size: 15px; font-weight: 700; color: var(--lp-ink); }
+.lp-doctor-spec { font-size: 12.5px; color: var(--lp-teal); font-weight: 600; margin-top: 3px; margin-bottom: 16px; }
+.lp-doctor-btn {
+  display: block; background: var(--lp-teal-s); color: var(--lp-teal-d);
+  padding: 8px 16px; border-radius: 10px;
+  font-size: 12.5px; font-weight: 700;
+  text-decoration: none;
+  transition: background .15s;
+  border: 1px solid rgba(13,148,136,.2);
+}
+.lp-doctor-btn:hover { background: #99f6e4; }
+
+/* ─── Sécurité ─── */
+.lp-section-dark {
+  background: #0b3a46;
+  padding: 96px 32px;
+}
+
+.lp-security-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
+}
+
+.lp-badge-light { background: rgba(20,184,166,.2); color: #5eead4; border-color: rgba(20,184,166,.3); }
+
+.lp-security-features { margin-top: 32px; display: flex; flex-direction: column; gap: 22px; }
+.lp-sec-feat { display: flex; gap: 16px; align-items: flex-start; }
+.lp-sec-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(255,255,255,.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.lp-sec-feat strong { color: #fff; font-size: 15px; display: block; margin-bottom: 3px; }
+.lp-sec-feat p      { color: #94a3b8; font-size: 13px; line-height: 1.6; }
+
+.lp-sec-card {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.lp-sec-card-header {
+  background: rgba(255,255,255,.08);
+  padding: 14px 20px;
+  font-size: 14px; font-weight: 700; color: #fff;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+.lp-sec-card-body { padding: 20px; }
+.lp-sec-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.lp-sec-label { font-size: 13px; color: #94a3b8; }
+.lp-sec-val   { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+.lp-code      { font-family: monospace; background: rgba(255,255,255,.06); padding: 2px 8px; border-radius: 6px; }
+.lp-sec-encrypted { margin-top: 14px; background: rgba(255,255,255,.04); border-radius: 10px; padding: 12px 14px; }
+.lp-sec-encrypted code { color: #5eead4; font-family: monospace; font-size: 12px; word-break: break-all; }
+
+.lp-sec-badge-row { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.08); }
+.lp-sec-badge {
+  background: rgba(13,148,136,.25); color: #5eead4;
+  padding: 5px 14px; border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+  border: 1px solid rgba(13,148,136,.3);
+}
+
+/* ─── Rôles ─── */
+.lp-roles-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+
+.lp-role-card {
+  border-radius: var(--lp-r);
+  padding: 28px 22px;
+  border: 1px solid var(--lp-border);
+  background: #fff;
+  box-shadow: var(--lp-shadow);
+  transition: transform .2s;
+}
+.lp-role-card:hover { transform: translateY(-4px); }
+
+.lp-role-icon  { font-size: 36px; margin-bottom: 14px; }
+.lp-role-card h3 { font-size: 17px; font-weight: 800; color: var(--lp-ink); margin-bottom: 14px; }
+.lp-role-card ul { list-style: none; margin-bottom: 18px; display: flex; flex-direction: column; gap: 8px; }
+.lp-role-card li { font-size: 13px; color: var(--lp-muted); display: flex; align-items: center; gap: 7px; }
+.lp-role-card li::before { content: "→"; color: var(--lp-teal); font-weight: 700; }
+
+.lp-role-tag { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+.lp-role-admin     .lp-role-tag  { background: #ede9fe; color: #6d28d9; }
+.lp-role-medecin   .lp-role-tag  { background: var(--lp-teal-s); color: var(--lp-teal-d); }
+.lp-role-secretaire .lp-role-tag { background: #fef3c7; color: #b45309; }
+.lp-role-tag-green { background: #dcfce7 !important; color: #16a34a !important; }
+
+/* ─── CTA final ─── */
+.lp-cta {
+  background: linear-gradient(135deg, #0b3a46 0%, #0d9488 100%);
+  padding: 80px 32px;
+}
+
+.lp-cta-inner {
+  max-width: 1000px; margin: 0 auto;
+  display: flex; align-items: center; gap: 60px; flex-wrap: wrap;
+}
+
+.lp-cta-content { flex: 1; }
+.lp-cta-content h2 { font-size: 34px; font-weight: 800; color: #fff; margin-bottom: 12px; line-height: 1.2; }
+.lp-cta-content p  { color: rgba(255,255,255,.75); font-size: 17px; margin-bottom: 28px; }
+.lp-cta-actions    { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.lp-btn-ghost-white {
+  display: inline-flex; align-items: center;
+  color: #fff;
+  padding: 14px 24px; border-radius: 14px;
+  font-size: 15px; font-weight: 600;
+  text-decoration: none;
+  border: 2px solid rgba(255,255,255,.3);
+  transition: border-color .15s, background .15s;
+}
+.lp-btn-ghost-white:hover { border-color: #fff; background: rgba(255,255,255,.08); }
+
+.lp-cta-visual { display: flex; flex-direction: column; gap: 10px; }
+.lp-cta-pill {
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.2);
+  color: #fff;
+  padding: 12px 20px; border-radius: 12px;
+  font-size: 14px; font-weight: 600;
+  backdrop-filter: blur(4px);
+  transition: background .15s;
+}
+.lp-cta-pill:hover { background: rgba(255,255,255,.18); }
+
+/* ─── Footer ─── */
+.lp-footer { background: #0f172a; padding: 60px 32px 32px; }
+
+.lp-footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 40px; }
+
+.lp-footer-brand p { font-size: 13.5px; color: #64748b; margin: 14px 0; line-height: 1.7; }
+.lp-footer-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.lp-footer-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.lp-footer-badges span { background: rgba(255,255,255,.06); color: #94a3b8; padding: 4px 10px; border-radius: 8px; font-size: 12px; border: 1px solid rgba(255,255,255,.08); }
+
+.lp-footer-col h4 { color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 16px; }
+.lp-footer-col { display: flex; flex-direction: column; gap: 10px; }
+.lp-footer-col a { color: #64748b; font-size: 13.5px; text-decoration: none; transition: color .15s; }
+.lp-footer-col a:hover { color: #cbd5e1; }
+
+.lp-footer-bottom {
+  padding-top: 24px; border-top: 1px solid rgba(255,255,255,.06);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 12px;
+  font-size: 13px; color: #475569;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1024px) {
+  .lp-services-grid { grid-template-columns: repeat(2, 1fr); }
+  .lp-doctors-grid  { grid-template-columns: repeat(2, 1fr); }
+  .lp-roles-grid    { grid-template-columns: repeat(2, 1fr); }
+  .lp-security-grid { grid-template-columns: 1fr; }
+  .lp-footer-grid   { grid-template-columns: 1fr 1fr; gap: 32px; }
+}
+
+@media (max-width: 768px) {
+  .lp-nav-links, .lp-nav-actions { display: none; }
+  .lp-burger { display: block; }
+  .lp-hero   { padding: 48px 20px 60px; }
+  .lp-hero-inner { flex-direction: column; gap: 40px; }
+  .lp-hero-text h1 { font-size: 32px; }
+  .lp-hero-visual { min-height: 320px; width: 100%; }
+  .lp-card-rdv    { position: relative; right: auto; top: auto; width: 100%; }
+  .lp-card-notif, .lp-card-analyse { display: none; }
+  .lp-stats-grid  { gap: 0; }
+  .lp-stat-divider { display: none; }
+  .lp-stat-item   { padding: 12px 24px; }
+  .lp-section     { padding: 64px 20px; }
+  .lp-section-alt { padding: 64px 20px; }
+  .lp-section-dark { padding: 64px 20px; }
+  .lp-services-grid, .lp-doctors-grid, .lp-roles-grid { grid-template-columns: 1fr; }
+  .lp-steps-grid  { flex-direction: column; align-items: center; }
+  .lp-step-arrow  { transform: rotate(90deg); }
+  .lp-footer-grid { grid-template-columns: 1fr; gap: 24px; }
+  .lp-cta-inner   { flex-direction: column; gap: 32px; }
+  .lp-section-head h2 { font-size: 26px; }
+  .urg-inner { padding: 12px 20px; }
+}
+
+</style>
+
+<script>
+function toggleMenu() {
+  const m = document.getElementById('mobileMenu');
+  m.classList.toggle('open');
+}
+</script>
+
+<!-- ================================================================
+     MODAL POPUP : LOGIN + REGISTER
+     S'ouvre sur la page d'accueil avec fond flou
+================================================================ -->
+<div id="authOverlay"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(15,23,42,.5);z-index:9999;align-items:center;
+            justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box;"
+     onclick="if(event.target===this)closeModal();">
+
+  <div id="authBox"
+       style="background:#fff;width:100%;max-width:460px;border-radius:24px;
+              padding:36px;box-shadow:0 30px 60px rgba(15,23,42,.35);
+              position:relative;margin:auto;
+              animation:slideUp .3s cubic-bezier(.34,1.56,.64,1);">
+
+    <button onclick="closeModal()"
+            style="position:absolute;top:14px;right:14px;background:#f1f5f9;
+                   border:none;width:32px;height:32px;border-radius:50%;
+                   font-size:16px;cursor:pointer;color:#64748b;
+                   display:flex;align-items:center;justify-content:center;">&#10005;</button>
+
+    <!-- Logo -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:22px;">
+      <div style="width:38px;height:38px;background:linear-gradient(135deg,#14b8a6,#0d9488);
+                  color:#fff;border-radius:10px;display:flex;align-items:center;
+                  justify-content:center;font-size:20px;font-weight:800;
+                  box-shadow:0 4px 12px rgba(13,148,136,.35);">+</div>
+      <span style="font-size:20px;font-weight:800;color:#0f172a;font-family:'Inter',sans-serif;">MediCabinet</span>
+    </div>
+
+    <!-- ONGLETS -->
+    <div style="display:flex;background:#f1f5f9;border-radius:30px;padding:5px;
+                margin-bottom:24px;border:1px solid #e2e8f0;">
+      <div id="tab-login" onclick="showForm('login')"
+           style="flex:1;text-align:center;padding:11px;border-radius:26px;
+                  font-size:14px;font-weight:600;cursor:pointer;
+                  background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.06);
+                  color:#0d9488;transition:all .2s;font-family:'Inter',sans-serif;">
+        Se connecter
+      </div>
+      <div id="tab-register" onclick="showForm('register')"
+           style="flex:1;text-align:center;padding:11px;border-radius:26px;
+                  font-size:14px;font-weight:600;cursor:pointer;
+                  color:#64748b;transition:all .2s;font-family:'Inter',sans-serif;">
+        S'inscrire
+      </div>
+    </div>
+
+    <!-- ======= FORM LOGIN ======= -->
+    <div id="form-login">
+      <h2 style="font-size:22px;font-weight:800;color:#0f172a;text-align:center;
+                 margin:0 0 6px;font-family:'Inter',sans-serif;">Connexion</h2>
+      <p style="font-size:13px;color:#64748b;text-align:center;margin:0 0 20px;
+                font-family:'Inter',sans-serif;">
+        Accédez à votre espace MediCabinet sécurisé.
+      </p>
+
+      <!-- Google -->
+      <div style="border:1px solid #e2e8f0;border-radius:12px;padding:18px;
+                  background:#f8fafc;margin-bottom:18px;position:relative;text-align:center;">
+        <span style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);
+                     background:#fff;padding:2px 12px;font-size:10px;font-weight:700;
+                     color:#16a34a;border:1px solid #bbf7d0;border-radius:20px;
+                     font-family:'Inter',sans-serif;">&#10003; Recommandé</span>
+        <a href="{{ url_for('oauth.google_login') }}"
+           style="display:inline-flex;align-items:center;justify-content:center;gap:10px;
+                  background:#fff;color:#0f172a;padding:12px 24px;border-radius:10px;
+                  font-weight:600;font-size:14px;text-decoration:none;
+                  border:1px solid #cbd5e1;box-shadow:0 1px 3px rgba(0,0,0,.06);
+                  font-family:'Inter',sans-serif;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20" height="20">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          S'identifier avec Google
+        </a>
+      </div>
+
+      <div style="text-align:center;margin:14px 0;position:relative;">
+        <div style="position:absolute;left:0;top:50%;width:100%;height:1px;background:#e2e8f0;"></div>
+        <span style="background:#fff;padding:0 12px;color:#94a3b8;font-size:11px;
+                     font-weight:700;position:relative;font-family:'Inter',sans-serif;">
+          OU PAR IDENTIFIANTS
+        </span>
+      </div>
+
+      <form method="POST" action="{{ url_for('auth.login') }}">
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#0f172a;
+                        margin-bottom:6px;font-family:'Inter',sans-serif;">Adresse e-mail</label>
+          <input type="email" name="email" required placeholder="prenom@email.fr"
+                 style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;
+                        font-size:13px;box-sizing:border-box;outline:none;font-family:'Inter',sans-serif;">
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#0f172a;
+                        margin-bottom:6px;font-family:'Inter',sans-serif;">Mot de passe</label>
+          <input type="password" name="password" required placeholder="Votre mot de passe"
+                 style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;
+                        font-size:13px;box-sizing:border-box;outline:none;font-family:'Inter',sans-serif;">
+        </div>
+        <button type="submit"
+                style="width:100%;padding:14px;background:#0d9488;color:#fff;border:none;
+                       border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;
+                       box-shadow:0 4px 14px rgba(13,148,136,.3);font-family:'Inter',sans-serif;">
+          Se connecter &rarr;
+        </button>
+      </form>
+      <p style="text-align:center;font-size:13px;color:#64748b;margin:16px 0 0;
+                font-family:'Inter',sans-serif;">
+        Pas de compte ?
+        <a href="#" onclick="showForm('register');return false;"
+           style="color:#0d9488;font-weight:700;text-decoration:none;">Créer un espace gratuit</a>
+      </p>
+    </div>
+
+    <!-- ======= FORM REGISTER ======= -->
+    <div id="form-register" style="display:none;">
+      <h2 style="font-size:22px;font-weight:800;color:#0f172a;text-align:center;
+                 margin:0 0 6px;font-family:'Inter',sans-serif;">Créer un espace patient</h2>
+      <p style="font-size:13px;color:#64748b;text-align:center;margin:0 0 20px;
+                font-family:'Inter',sans-serif;">
+        Inscription gratuite · Sécurisée · 2 minutes
+      </p>
+
+      <form method="POST" action="{{ url_for('auth.register') }}">
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <div style="flex:1;">
+            <label style="display:block;font-size:12px;font-weight:600;color:#0f172a;
+                          margin-bottom:6px;font-family:'Inter',sans-serif;">Prénom</label>
+            <input type="text" name="first_name" required placeholder="Jean"
+                   style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;
+                          font-size:13px;box-sizing:border-box;outline:none;font-family:'Inter',sans-serif;">
+          </div>
+          <div style="flex:1;">
+            <label style="display:block;font-size:12px;font-weight:600;color:#0f172a;
+                          margin-bottom:6px;font-family:'Inter',sans-serif;">Nom</label>
+            <input type="text" name="last_name" required placeholder="Dupont"
+                   style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;
+                          font-size:13px;box-sizing:border-box;outline:none;font-family:'Inter',sans-serif;">
+          </div>
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#0f172a;
+                        margin-bottom:6px;font-family:'Inter',sans-serif;">Adresse e-mail</label>
+          <input type="email" name="email" required placeholder="jean.dupont@email.fr"
+                 style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;
+                        font-size:13px;box-sizing:border-box;outline:none;font-family:'Inter',sans-serif;">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#0f172a;
+                        margin-bottom:6px;font-family:'Inter',sans-serif;">Téléphone <span style="font-weight:400;color:#94a3b8;">(optionnel)</span></label>
+          <input type="text" name="phone" placeholder="06 12 34 56 78"
+                 style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;
+                        font-size:13px;box-sizing:border-box;outline:none;font-family:'Inter',sans-serif;">
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#0f172a;
+                        margin-bottom:6px;font-family:'Inter',sans-serif;">
+            Mot de passe <span style="font-weight:400;color:#94a3b8;">(12 car. min, MAJ, chiffre)</span>
+          </label>
+          <input type="password" name="password" required placeholder="Mot de passe sécurisé"
+                 style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;
+                        font-size:13px;box-sizing:border-box;outline:none;font-family:'Inter',sans-serif;">
+        </div>
+        <button type="submit"
+                style="width:100%;padding:14px;background:#0d9488;color:#fff;border:none;
+                       border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;
+                       box-shadow:0 4px 14px rgba(13,148,136,.3);font-family:'Inter',sans-serif;">
+          Créer mon compte patient &rarr;
+        </button>
+      </form>
+      <p style="text-align:center;font-size:13px;color:#64748b;margin:16px 0 0;
+                font-family:'Inter',sans-serif;">
+        Déjà un compte ?
+        <a href="#" onclick="showForm('login');return false;"
+           style="color:#0d9488;font-weight:700;text-decoration:none;">Se connecter</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(28px) scale(.97); }
+  to   { opacity:1; transform:translateY(0)    scale(1);   }
+}
+/* Flou du fond quand le modal est ouvert */
+body.modal-open { overflow:hidden; }
+body.modal-open .lp-nav,
+body.modal-open .lp-hero,
+body.modal-open .lp-stats,
+body.modal-open .lp-section,
+body.modal-open .lp-section-alt,
+body.modal-open .lp-section-dark,
+body.modal-open .lp-cta,
+body.modal-open .lp-footer {
+  filter: blur(5px);
+  transition: filter .25s;
+  pointer-events: none;
+}
+</style>
+
+<script>
+/* ─── Fonctions Modal ─── */
+function openAuthModal(type) {
+  document.body.classList.add('modal-open');
+  var overlay = document.getElementById('authOverlay');
+  overlay.style.display = 'flex';
+  showForm(type || 'login');
+}
+
+function closeModal() {
+  document.getElementById('authOverlay').style.display = 'none';
+  document.body.classList.remove('modal-open');
+}
+
+function showForm(type) {
+  var fLogin  = document.getElementById('form-login');
+  var fReg    = document.getElementById('form-register');
+  var tLogin  = document.getElementById('tab-login');
+  var tReg    = document.getElementById('tab-register');
+
+  if (type === 'register') {
+    fReg.style.display   = 'block';
+    fLogin.style.display = 'none';
+    tReg.style.background   = '#fff';
+    tReg.style.boxShadow    = '0 2px 8px rgba(0,0,0,.06)';
+    tReg.style.color        = '#0d9488';
+    tLogin.style.background = 'transparent';
+    tLogin.style.boxShadow  = 'none';
+    tLogin.style.color      = '#64748b';
+  } else {
+    fLogin.style.display = 'block';
+    fReg.style.display   = 'none';
+    tLogin.style.background = '#fff';
+    tLogin.style.boxShadow  = '0 2px 8px rgba(0,0,0,.06)';
+    tLogin.style.color      = '#0d9488';
+    tReg.style.background   = 'transparent';
+    tReg.style.boxShadow    = 'none';
+    tReg.style.color        = '#64748b';
+  }
+}
+
+/* Fermer avec Echap */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+/* Auto-ouvrir si message d'erreur */
+document.addEventListener('DOMContentLoaded', function() {
+  if (document.querySelector('.flash.flash-error')) {
+    openAuthModal('login');
+  }
+});
+</script>
+
+{% endblock %}

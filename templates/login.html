@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}Connexion · MediCabinet{% endblock %}
+
+{% block guest %}
+<div class="centered-login-container">
+  
+  <div class="login-card">
+    
+    <!-- Brand Header -->
+    <div class="brand-header">
+      <div class="logo-shield">+</div>
+      <div>
+        <div class="brand-title">MediCabinet</div>
+        <div class="brand-subtitle">Cabinet médical numérique</div>
+      </div>
+    </div>
+
+    <!-- Tabs : Patient / Praticien -->
+    <div class="login-tabs">
+      <div class="tab active" id="tab-patient" onclick="switchTab('patient')">👤 Espace Patient</div>
+      <div class="tab inactive" id="tab-praticien" onclick="switchTab('praticien')">🩺 Espace Praticien</div>
+    </div>
+
+    <!-- Alerte Info -->
+    <div class="info-alert">
+      <div class="info-icon">ℹ️</div>
+      <div>
+        <strong>Information Importante</strong><br>
+        Pour des raisons de secret médical, munissez-vous de vos identifiants ou utilisez la passerelle sécurisée.
+      </div>
+    </div>
+
+    <h2 class="login-heading" id="login-heading">Connexion à l'espace Patient</h2>
+    <p class="login-subheading" id="login-subheading">
+      Identifiez-vous pour consulter vos bilans de santé, vos documents cliniques et vos prochains rendez-vous.
+    </p>
+
+    <!-- Connexion Google -->
+    <div class="oauth-box" id="oauth-box">
+      <div class="oauth-badge">✓ Recommandé & Sécurisé</div>
+      <a href="{{ url_for('oauth.google_login') }}" class="oauth-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20px" height="20px">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        S'identifier avec Google
+      </a>
+      <div class="oauth-desc">
+        Ce dispositif officiel garantit l'identité des usagers en s'appuyant sur des comptes déjà existants, en toute sécurité.
+      </div>
+    </div>
+
+    <div class="separator" id="separator"><span>OU PAR VOS IDENTIFIANTS MEDICABINET</span></div>
+
+    <!-- Formulaire classique -->
+    <form method="POST" class="classic-form">
+      <div class="form-group">
+        <label id="label-email">Adresse e-mail ou n° de Sécurité Sociale (NIR) <span class="help-icon">?</span></label>
+        <div class="input-wrapper">
+          <span class="input-icon">✉️</span>
+          <input type="email" name="email" id="input-email" required placeholder="ex: 1 89 05 75 123 456 78 ou prenom@email.fr">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <div class="label-row">
+          <label>Mot de passe</label>
+          <a href="#" class="forgot-link">Mot de passe oublié ?</a>
+        </div>
+        <div class="input-wrapper">
+          <span class="input-icon">🔒</span>
+          <input type="password" name="password" required placeholder="Votre mot de passe sécurisé">
+          <span class="input-icon-right">👁️</span>
+        </div>
+      </div>
+
+      <div class="form-options">
+        <label class="checkbox-label">
+          <input type="checkbox" name="remember">
+          Se souvenir de moi sur cet ordinateur sécurisé
+        </label>
+        <span class="session-badge">✓ Session chiffrée</span>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submit-btn">
+        Se connecter à mon espace →
+      </button>
+    </form>
+
+    <!-- Bloc Création de compte (affiché uniquement pour patient) -->
+    <div class="register-box" id="register-box">
+      <div>
+        <div class="r-title">Nouveau sur MediCabinet ?</div>
+        <div class="r-desc">Activez votre dossier patient sécurisé en moins de 2 minutes.</div>
+      </div>
+      <a href="{{ url_for('auth.register') }}" class="register-btn">Créer un compte</a>
+    </div>
+    
+    <!-- Footer liens -->
+    <div class="right-footer">
+      📞 Besoin d'aide ? Secrétariat médical : <strong>01 42 68 00 24</strong> • Assistance 24/7
+    </div>
+
+  </div>
+</div>
+
+<style>
+  /* Reset rapide pour écraser base.html sur cette page */
+  body, html { margin: 0; padding: 0; height: 100%; font-family: 'Inter', sans-serif; background: #f8fafc; }
+  .guest-wrap { min-height: 100vh; display: flex; flex-direction: column; padding: 0 !important; }
+  
+  .centered-login-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .login-card {
+    background: #fff;
+    max-width: 540px;
+    width: 100%;
+    padding: 48px;
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(13, 148, 136, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
+    border: 1px solid #e2e8f0;
+  }
+
+  .brand-header { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 32px; }
+  .logo-shield { 
+    background: linear-gradient(135deg, #14b8a6, #0d9488); color: #fff; font-size: 20px; font-weight: 800;
+    width: 44px; height: 44px; border-radius: 12px; 
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(13,148,136,.35);
+  }
+  .brand-title { font-size: 22px; font-weight: 800; color: #0f172a; }
+  .brand-subtitle { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+  .login-tabs { display: flex; background: #f1f5f9; border-radius: 30px; padding: 5px; margin-bottom: 28px; border: 1px solid #e2e8f0; }
+  .tab { flex: 1; text-align: center; padding: 12px; border-radius: 26px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+  .tab.active { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); color: #0d9488; }
+  .tab.inactive { color: #64748b; }
+  .tab.inactive:hover { color: #0f172a; }
+
+  .info-alert { 
+    background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 8px; 
+    padding: 16px; display: flex; gap: 12px; font-size: 13px; color: #92400e; margin-bottom: 32px;
+  }
+  .info-icon { font-size: 18px; }
+
+  .login-heading { font-size: 24px; font-weight: 800; color: #0f172a; margin: 0 0 8px 0; text-align: center; }
+  .login-subheading { font-size: 14px; color: #64748b; margin: 0 0 28px 0; line-height: 1.5; text-align: center; }
+
+  .oauth-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 32px; position: relative; background: #f8fafc; }
+  .oauth-badge { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 12px; font-size: 10px; font-weight: 700; color: #16a34a; letter-spacing: 0.5px; text-transform: uppercase; border: 1px solid #e2e8f0; border-radius: 12px; }
+  .oauth-btn { 
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: #fff; color: #0f172a; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 15px; text-decoration: none;
+    margin-bottom: 12px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background 0.2s;
+  }
+  .oauth-btn:hover { background: #f1f5f9; }
+  .oauth-desc { font-size: 11px; color: #64748b; line-height: 1.5; }
+
+  .separator { text-align: center; margin: 24px 0; position: relative; }
+  .separator::before { content: ""; position: absolute; left: 0; top: 50%; width: 100%; height: 1px; background: #e2e8f0; z-index: 1; }
+  .separator span { background: #fff; padding: 0 12px; color: #94a3b8; font-size: 11px; font-weight: 700; position: relative; z-index: 2; letter-spacing: 0.5px; }
+
+  .classic-form { margin-bottom: 32px; }
+  .form-group { margin-bottom: 20px; }
+  .form-group label { display: block; font-size: 13px; font-weight: 600; color: #0f172a; margin-bottom: 8px; }
+  .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .label-row label { margin: 0; }
+  .forgot-link { font-size: 12px; color: #0d9488; font-weight: 600; text-decoration: none; }
+  .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #64748b; color: #64748b; font-size: 9px; margin-left: 4px; }
+  
+  .input-wrapper { position: relative; }
+  .input-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #94a3b8; }
+  .input-icon-right { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; cursor: pointer; color: #94a3b8; }
+  
+  .input-wrapper input { 
+    width: 100%; padding: 14px 14px 14px 44px; 
+    border: 1px solid #cbd5e1; border-radius: 12px; 
+    font-size: 14px; outline: none; transition: all 0.2s;
+    box-sizing: border-box; background: #fff;
+  }
+  .input-wrapper input:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+
+  .form-options { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+  .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #475569; cursor: pointer; }
+  .session-badge { font-size: 11px; color: #16a34a; font-weight: 600; background: #dcfce7; padding: 4px 10px; border-radius: 20px; }
+
+  .submit-btn { 
+    width: 100%; padding: 16px; background: #0d9488; color: #fff; 
+    border: none; border-radius: 12px; font-size: 15px; font-weight: 700; 
+    cursor: pointer; transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(13,148,136,.25);
+  }
+  .submit-btn:hover { background: #0f766e; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(13,148,136,.35); }
+
+  .register-box { 
+    background: #f0fdf9; border: 1px solid #ccfbf1; border-radius: 12px; 
+    padding: 20px; display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 28px;
+  }
+  .r-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+  .r-desc { font-size: 12px; color: #64748b; }
+  .register-btn { background: #fff; color: #0d9488; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; border: 1px solid #99f6e4; transition: all 0.2s;}
+  .register-btn:hover { background: #f0fdf9; border-color: #0d9488; }
+
+  .right-footer { text-align: center; font-size: 12px; color: #64748b; }
+
+  @media (max-width: 600px) {
+    .login-card { padding: 32px 24px; border-radius: 20px; }
+    .form-options { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .register-box { flex-direction: column; text-align: center; gap: 16px; }
+  }
+</style>
+
+<script>
+function switchTab(role) {
+  const tabPatient = document.getElementById('tab-patient');
+  const tabPraticien = document.getElementById('tab-praticien');
+  
+  const heading = document.getElementById('login-heading');
+  const subheading = document.getElementById('login-subheading');
+  const oauthBox = document.getElementById('oauth-box');
+  const separator = document.getElementById('separator');
+  const registerBox = document.getElementById('register-box');
+  const labelEmail = document.getElementById('label-email');
+  const inputEmail = document.getElementById('input-email');
+  const submitBtn = document.getElementById('submit-btn');
+
+  if (role === 'patient') {
+    tabPatient.className = 'tab active';
+    tabPraticien.className = 'tab inactive';
+    
+    heading.innerText = "Connexion à l'espace Patient";
+    subheading.innerText = "Identifiez-vous pour consulter vos bilans de santé, vos documents cliniques et vos prochains rendez-vous.";
+    
+    oauthBox.style.display = 'block';
+    separator.style.display = 'block';
+    registerBox.style.display = 'flex';
+    
+    labelEmail.innerHTML = 'Adresse e-mail ou n° de Sécurité Sociale (NIR) <span class="help-icon">?</span>';
+    inputEmail.placeholder = "ex: 1 89 05 75 123 456 78 ou prenom@email.fr";
+    submitBtn.innerText = "Se connecter à mon espace patient →";
+  } else {
+    tabPatient.className = 'tab inactive';
+    tabPraticien.className = 'tab active';
+    
+    heading.innerText = "Espace Praticien & Personnel";
+    subheading.innerText = "Accès sécurisé réservé au corps médical et administratif du cabinet (Médecins, Secrétaires, Admins).";
+    
+    oauthBox.style.display = 'none';
+    separator.style.display = 'none';
+    registerBox.style.display = 'none';
+    
+    labelEmail.innerHTML = 'E-mail professionnel ou Identifiant CPS <span class="help-icon">?</span>';
+    inputEmail.placeholder = "dr.nom@medicabinet.fr";
+    submitBtn.innerText = "Accéder à l'espace professionnel →";
+  }
+}
+</script>
+{% endblock %}
