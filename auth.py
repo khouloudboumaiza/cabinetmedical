@@ -14,10 +14,16 @@ bcrypt = Bcrypt()
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
+PASSWORD_POLICY_MSG = (
+    "Le mot de passe doit contenir au moins 12 caractères, "
+    "dont au moins une lettre majuscule, une minuscule et un chiffre."
+)
+
+
 def password_is_strong(password: str) -> bool:
-    """Politique de mot de passe : au moins 12 caractères, une majuscule,
-    une minuscule et un chiffre."""
-    if len(password) < 12:
+    """Politique de mot de passe unique pour toute l'application :
+    au moins 12 caractères, une majuscule, une minuscule et un chiffre."""
+    if not password or len(password) < 12:
         return False
     if not re.search(r"[A-Z]", password):
         return False
@@ -36,6 +42,10 @@ def get_client_ip():
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        # Déconnecter toute session active si l'utilisateur soumet une nouvelle inscription
+        if current_user.is_authenticated:
+            logout_user()
+
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         first_name = request.form.get("first_name", "").strip()
@@ -44,42 +54,43 @@ def register():
 
         if not EMAIL_REGEX.match(email):
             flash("Adresse email invalide.", "error")
-            return redirect(url_for("index"))
+            return redirect(url_for("index", auth_tab="register"))
 
         if not password_is_strong(password):
-            flash(
-                "Le mot de passe doit contenir au moins 12 caractères, "
-                "une majuscule, une minuscule et un chiffre.",
-                "error",
-            )
-            return redirect(url_for("index"))
+            flash(PASSWORD_POLICY_MSG, "error")
+            return redirect(url_for("index", auth_tab="register"))
 
         if not first_name or not last_name:
             flash("Le prénom et le nom sont obligatoires.", "error")
-            return redirect(url_for("index"))
+            return redirect(url_for("index", auth_tab="register"))
 
         if User.query.filter_by(email=email).first():
             flash("Impossible de créer ce compte avec ces informations.", "error")
-            return redirect(url_for("index"))
+            return redirect(url_for("index", auth_tab="register"))
 
-        password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
-        user = User(email=email, password_hash=password_hash, role="patient")
-        db.session.add(user)
-        db.session.flush()
+        try:
+            password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
+            user = User(email=email, password_hash=password_hash, role="patient")
+            db.session.add(user)
+            db.session.flush()
 
-        patient = Patient(
-            user_id=user.id,
-            first_name=first_name,
-            last_name=last_name,
-            phone=phone or None,
-        )
-        db.session.add(patient)
-        db.session.commit()
+            patient = Patient(
+                user_id=user.id,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone or None,
+            )
+            db.session.add(patient)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            flash("Une erreur est survenue lors de la création du compte.", "error")
+            return redirect(url_for("index", auth_tab="register"))
 
         flash("Compte créé avec succès. Vous pouvez vous connecter.", "success")
-        return redirect(url_for("index"))
+        return redirect(url_for("index", auth_tab="login"))
 
-    return redirect(url_for("index"))
+    return redirect(url_for("index", auth_tab="register"))
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])

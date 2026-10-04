@@ -7,6 +7,7 @@ from auth import auth_bp, bcrypt
 from oauth import oauth_bp, init_oauth
 from admin import admin_bp
 from cabinet import cabinet_bp
+from messages import messages_bp, get_or_create_csrf_token
 
 
 def create_app():
@@ -28,11 +29,17 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
+    # --- Context Processors ---
+    @app.context_processor
+    def inject_csrf_token():
+        return dict(csrf_token=get_or_create_csrf_token)
+
     # --- Blueprints ---
     app.register_blueprint(auth_bp)
     app.register_blueprint(oauth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(cabinet_bp)
+    app.register_blueprint(messages_bp)
 
     # --- Routes principales ---
     @app.route("/")
@@ -48,6 +55,7 @@ def create_app():
         _install_tamper_protection_triggers()
 
     return app
+
 
 
 def _install_tamper_protection_triggers():
@@ -84,6 +92,20 @@ def _install_tamper_protection_triggers():
         BEFORE DELETE ON security_alerts
         BEGIN
             SELECT RAISE(ABORT, 'security_alerts ne peut pas être supprimé');
+        END;
+        """,
+        """
+        CREATE TRIGGER IF NOT EXISTS prevent_message_logs_update
+        BEFORE UPDATE ON message_logs
+        BEGIN
+            SELECT RAISE(ABORT, 'message_logs est en lecture seule (append-only)');
+        END;
+        """,
+        """
+        CREATE TRIGGER IF NOT EXISTS prevent_message_logs_delete
+        BEFORE DELETE ON message_logs
+        BEGIN
+            SELECT RAISE(ABORT, 'message_logs est en lecture seule (append-only)');
         END;
         """,
     ]

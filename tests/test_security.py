@@ -31,11 +31,12 @@ def test_home_page(client):
 
 
 def test_login_page(client):
-    assert client.get("/login").status_code == 200
+    assert client.get("/login", follow_redirects=True).status_code == 200
 
 
 def test_register_page(client):
-    assert client.get("/register").status_code == 200
+    assert client.get("/register", follow_redirects=True).status_code == 200
+
 
 
 # ─── Inscription ────────────────────────────────────────────

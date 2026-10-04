@@ -76,6 +76,36 @@ def aes_decrypt(key: bytes, token: str) -> str:
     return plaintext.decode()
 
 
+def aes_encrypt_message(key: bytes, plaintext: str, conversation_id: int) -> tuple[str, str]:
+    """
+    Chiffre un message de messagerie avec AES-256-GCM.
+    Utilise conversation_id en tant qu'AAD (Associated Authenticated Data).
+    Retourne (ciphertext_base64, nonce_base64).
+    """
+    aesgcm = AESGCM(key)
+    nonce = os.urandom(12)
+    aad = str(conversation_id).encode("utf-8")
+    ciphertext = aesgcm.encrypt(nonce, plaintext.encode("utf-8"), aad)
+    return (
+        base64.b64encode(ciphertext).decode("utf-8"),
+        base64.b64encode(nonce).decode("utf-8"),
+    )
+
+
+def aes_decrypt_message(key: bytes, ciphertext_b64: str, nonce_b64: str, conversation_id: int) -> str:
+    """
+    Déchiffre un message de messagerie avec AES-256-GCM en validant l'AAD.
+    Lève cryptography.exceptions.InvalidTag si le ciphertext, le nonce ou l'AAD est altéré.
+    """
+    aesgcm = AESGCM(key)
+    nonce = base64.b64decode(nonce_b64.encode("utf-8"))
+    ciphertext = base64.b64decode(ciphertext_b64.encode("utf-8"))
+    aad = str(conversation_id).encode("utf-8")
+    plaintext = aesgcm.decrypt(nonce, ciphertext, aad)
+    return plaintext.decode("utf-8")
+
+
 def generate_aes_key() -> bytes:
     """Génère une clé AES-256 aléatoire (32 octets)."""
     return os.urandom(32)
+

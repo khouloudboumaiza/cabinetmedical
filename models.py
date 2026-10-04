@@ -199,3 +199,77 @@ class SecurityAlert(db.Model):
 
     def __repr__(self):
         return f"<SecurityAlert {self.alert_type} user={self.user_id}>"
+
+
+class Conversation(db.Model):
+    """Conversation sécurisée patient ↔ médecin."""
+
+    __tablename__ = "conversations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("patients.id"), nullable=False)
+    doctor_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint("patient_id", "doctor_id", name="uq_patient_doctor_conversation"),
+    )
+
+    patient = db.relationship("Patient", backref=db.backref("conversations", lazy="dynamic", cascade="all, delete-orphan"))
+    doctor = db.relationship("User", foreign_keys=[doctor_id], backref=db.backref("doctor_conversations", lazy="dynamic"))
+    messages = db.relationship("Message", backref="conversation", lazy="dynamic", cascade="all, delete-orphan", order_by="Message.created_at.asc()")
+
+    def unread_count_for(self, user_id):
+        """Compte les messages non lus destinés à cet utilisateur."""
+        return self.messages.filter(Message.sender_id != user_id, Message.read_at.is_(None)).count()
+
+    def last_message(self):
+        """Retourne le dernier message de la conversation."""
+        return self.messages.order_by(Message.created_at.desc()).first()
+
+    def __repr__(self):
+        return f"<Conversation #{self.id} patient={self.patient_id} doctor={self.doctor_id}>"
+
+
+class Message(db.Model):
+    """Message chiffré AES-256-GCM (avec AAD = conversation_id)."""
+
+    __tablename__ = "messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("conversations.id"), nullable=False, index=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    ciphertext = db.Column(db.Text, nullable=False)  # AES-256-GCM base64
+    nonce = db.Column(db.String(32), nullable=False)       # Nonce aléatoire base64 (12 octets)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    read_at = db.Column(db.DateTime, nullable=True)
+
+    sender = db.relationship("User", foreign_keys=[sender_id])
+
+    def __repr__(self):
+        return f"<Message #{self.id} conv={self.conversation_id} sender={self.sender_id}>"
+
+
+class MessageLog(db.Model):
+    """Journal d'audit des événements de messagerie (append-only + HMAC).
+    Ne contient JAMAIS le contenu des messages."""
+
+    __tablename__ = "message_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    log_uid = db.Column(db.String(36), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    ip_address = db.Column(db.String(64))
+    action = db.Column(db.String(50), nullable=False)  # open_conversation, send_message, access_denied, role_excluded, etc.
+    conversation_id = db.Column(db.Integer, nullable=True)
+    details = db.Column(db.String(255), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    prev_hash = db.Column(db.String(64))
+    entry_hash = db.Column(db.String(64))
+
+    def __repr__(self):
+        return f"<MessageLog #{self.id} action={self.action} user={self.user_id}>"

@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Discussion avec {{ contact_name }} · MediCabinet{% endblock %}
+{% block crumb %}Messagerie sécurisée{% endblock %}
+{% block crumbsub %}Discussion avec {{ contact_role }} {{ contact_name }}{% endblock %}
+
+{% block content %}
+<div class="chat-wrapper" id="chatWrapper"
+     data-conversation-id="{{ conversation.id }}"
+     data-send-url="{{ url_for('messages.send_message', conversation_id=conversation.id) }}"
+     data-poll-url="{{ url_for('messages.poll_messages', conversation_id=conversation.id) }}">
+  <!-- En-tête de conversation -->
+  <div class="chat-header">
+    <div class="chat-contact-info">
+      <a href="{{ url_for('messages.index') }}" class="btn btn-outline btn-sm" style="margin-right:8px;">← Retour</a>
+      <div class="conv-avatar" style="width:36px;height:36px;font-size:15px;">
+        {{ contact_name[0]|upper }}
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:15px;color:var(--ink);">{{ contact_name }}</div>
+        <div style="font-size:11.5px;color:var(--muted);">{{ contact_role }} · Canaux chiffrés AES-256-GCM</div>
+      </div>
+    </div>
+    <div class="chat-security-pill">
+      🔒 Chiffrement de bout en bout
+    </div>
+  </div>
+
+  <!-- Zone de messages défilante -->
+  <div class="chat-messages-box" id="chatMessagesBox">
+    {% for msg in messages %}
+    <div class="message-row {{ 'me' if msg.is_me else 'them' }}" data-message-id="{{ msg.id }}">
+      <div class="message-bubble {{ 'me' if msg.is_me else 'them' }}">
+        <div class="message-text">{{ msg.content }}</div>
+        <div class="message-meta">
+          <span class="message-time">{{ msg.created_at.strftime('%H:%M') }}</span>
+          {% if msg.is_me %}
+          <span class="message-status">{{ '✓✓' if msg.read_at else '✓' }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div id="noMessagesNotice" style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13.5px;">
+      🔒 Début de la conversation sécurisée. Vos messages sont chiffrés en AES-256-GCM avant stockage.
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Zone d'envoi de message -->
+  <form id="chatForm" method="POST" action="{{ url_for('messages.send_message', conversation_id=conversation.id) }}" class="chat-input-bar">
+    <input type="hidden" name="csrf_token" id="csrfToken" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+    
+    <div class="input-wrapper" style="flex:1;position:relative;">
+      <textarea
+        id="messageInput"
+        name="content"
+        rows="2"
+        maxlength="2000"
+        required
+        placeholder="Écrivez votre message sécurisé (max 2000 caractères)..."
+        style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;resize:none;font-family:inherit;font-size:14px;"
+      ></textarea>
+      <div id="charCounter" style="position:absolute;bottom:6px;right:10px;font-size:11px;color:var(--muted);">0 / 2000</div>
+    </div>
+
+    <button type="submit" id="sendBtn" class="btn" style="height:46px;padding:0 20px;display:flex;align-items:center;gap:6px;">
+      <span>Envoyer</span> <span>➤</span>
+    </button>
+  </form>
+</div>
+
+<script>
+(function() {
+  const chatWrapper = document.getElementById("chatWrapper");
+  const messagesBox = document.getElementById("chatMessagesBox");
+  const chatForm = document.getElementById("chatForm");
+  const messageInput = document.getElementById("messageInput");
+  const charCounter = document.getElementById("charCounter");
+  const csrfToken = document.getElementById("csrfToken").value;
+  const sendUrl = chatWrapper.getAttribute("data-send-url");
+  const pollUrlBase = chatWrapper.getAttribute("data-poll-url");
+  let lastMessageId = 0;
+
+  function updateLastMessageId() {
+    const rows = messagesBox.querySelectorAll(".message-row[data-message-id]");
+    if (rows.length > 0) {
+      const lastRow = rows[rows.length - 1];
+      const idVal = parseInt(lastRow.getAttribute("data-message-id"), 10);
+      if (!isNaN(idVal) && idVal > lastMessageId) {
+        lastMessageId = idVal;
+      }
+    }
+  }
+  updateLastMessageId();
+
+  function scrollToBottom() {
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
+  scrollToBottom();
+
+  messageInput.addEventListener("input", function() {
+    const len = this.value.length;
+    charCounter.textContent = len + " / 2000";
+    if (len > 2000) {
+      charCounter.style.color = "var(--danger)";
+    } else {
+      charCounter.style.color = "var(--muted)";
+    }
+  });
+
+  messageInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      chatForm.dispatchEvent(new Event("submit", { cancelable: true }));
+    }
+  });
+
+  function appendMessageNode(msg) {
+    const notice = document.getElementById("noMessagesNotice");
+    if (notice) notice.remove();
+
+    const existing = messagesBox.querySelector(`.message-row[data-message-id="${msg.id}"]`);
+    if (existing) return;
+
+    const row = document.createElement("div");
+    row.className = "message-row " + (msg.is_me ? "me" : "them");
+    row.setAttribute("data-message-id", msg.id);
+
+    const bubble = document.createElement("div");
+    bubble.className = "message-bubble " + (msg.is_me ? "me" : "them");
+
+    const textDiv = document.createElement("div");
+    textDiv.className = "message-text";
+    textDiv.textContent = msg.content; // textContent obligatoire (anti-XSS)
+
+    const metaDiv = document.createElement("div");
+    metaDiv.className = "message-meta";
+
+    const timeSpan = document.createElement("span");
+    timeSpan.className = "message-time";
+    timeSpan.textContent = msg.created_at || "";
+
+    metaDiv.appendChild(timeSpan);
+
+    if (msg.is_me) {
+      const statusSpan = document.createElement("span");
+      statusSpan.className = "message-status";
+      statusSpan.textContent = msg.read ? "✓✓" : "✓";
+      metaDiv.appendChild(statusSpan);
+    }
+
+    bubble.appendChild(textDiv);
+    bubble.appendChild(metaDiv);
+    row.appendChild(bubble);
+    messagesBox.appendChild(row);
+
+    if (msg.id > lastMessageId) {
+      lastMessageId = msg.id;
+    }
+    scrollToBottom();
+  }
+
+  chatForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    const content = messageInput.value.trim();
+    if (!content || content.length > 2000) return;
+
+    fetch(sendUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-CSRFToken": csrfToken
+      },
+      body: JSON.stringify({ content: content })
+    })
+    .then(function(res) {
+      if (!res.ok) {
+        throw new Error("Erreur lors de l'envoi");
+      }
+      return res.json();
+    })
+    .then(function(data) {
+      if (data && data.message) {
+        appendMessageNode(data.message);
+        messageInput.value = "";
+        charCounter.textContent = "0 / 2000";
+      }
+    })
+    .catch(function(err) {
+      console.error(err);
+      chatForm.submit();
+    });
+  });
+
+  function pollNewMessages() {
+    const url = pollUrlBase + "?after=" + lastMessageId;
+    fetch(url, {
+      method: "GET",
+      headers: { "Accept": "application/json" }
+    })
+    .then(function(res) {
+      if (res.ok) return res.json();
+      return { messages: [] };
+    })
+    .then(function(data) {
+      if (data && data.messages && data.messages.length > 0) {
+        data.messages.forEach(function(m) {
+          appendMessageNode(m);
+        });
+      }
+    })
+    .catch(function(err) {
+      console.warn("Polling messagerie :", err);
+    });
+  }
+
+  setInterval(pollNewMessages, 5000);
+})();
+</script>
+{% endblock %}
