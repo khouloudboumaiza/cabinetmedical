@@ -129,5 +129,23 @@
 </div>
 {% endif %}
 
+<!-- ============================================================
+     MESURE DE DISSUASION (Désactiver le clic droit et les raccourcis)
+============================================================ -->
+<script>
+  // Bloquer les raccourcis clavier classiques (F12, Ctrl+U, Ctrl+Shift+I, etc.)
+  document.addEventListener('keydown', function(e) {
+    if (
+      e.key === 'F12' || // Touche F12
+      (e.ctrlKey && e.key.toLowerCase() === 'u') || // Ctrl+U (Afficher la source)
+      (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i') || // Ctrl+Shift+I (Inspecteur)
+      (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'j') || // Ctrl+Shift+J (Console)
+      (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c')    // Ctrl+Shift+C (Inspecteur d'éléments)
+    ) {
+      e.preventDefault();
+    }
+  });
+</script>
+
 </body>
 </html>
