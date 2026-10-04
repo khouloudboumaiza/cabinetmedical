@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() if csrf_token is callable else csrf_token }}">
   <title>{% block title %}MediCabinet{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -53,6 +55,13 @@
       <a href="{{ url_for('cabinet.prescriptions', patient_id=current_user.patient_profile.id) }}"
          class="nav-item {{ 'active' if request.endpoint in ['cabinet.prescriptions','cabinet.prescription_new','cabinet.prescription_view'] }}">
         <span>💊</span> Mes ordonnances
+      </a>
+      {% endif %}
+
+      {% if current_user.role in ['patient', 'medecin'] %}
+      <a href="{{ url_for('messages.index') }}"
+         class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('messages.') }}">
+        <span>💬</span> Messagerie
       </a>
       {% endif %}
 

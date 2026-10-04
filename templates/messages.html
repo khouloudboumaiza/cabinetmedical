@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Messagerie sécurisée · MediCabinet{% endblock %}
+{% block crumb %}Messagerie sécurisée{% endblock %}
+{% block crumbsub %}Échanges chiffrés de bout en bout entre patient et médecin{% endblock %}
+
+{% block content %}
+<div class="encrypt-note">
+  🔒 <strong>Messagerie chiffrée AES-256-GCM</strong> avec données associées authentifiées (AAD). Les administrateurs et secrétaires n'ont aucun accès.
+</div>
+
+<div class="messages-container-grid">
+  <!-- Liste des conversations -->
+  <div class="panel">
+    <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="margin:0;font-size:16px;font-weight:700;">Vos conversations</h3>
+      <span class="badge badge-info">{{ conversations|length }} conversation(s)</span>
+    </div>
+
+    {% if conversations %}
+    <div class="conversations-list">
+      {% for item in conversations %}
+      <a href="{{ url_for('messages.conversation_view', conversation_id=item.conv.id) }}" class="conversation-card {{ 'has-unread' if item.unread > 0 }}">
+        <div class="conv-avatar">
+          {{ item.contact_name[0]|upper }}
+        </div>
+        <div class="conv-details">
+          <div class="conv-top">
+            <span class="conv-name">{{ item.contact_name }}</span>
+            <span class="conv-time">{{ item.last_time.strftime('%d/%m %H:%M') }}</span>
+          </div>
+          <div class="conv-bottom">
+            <span class="conv-snippet">{{ item.last_message or 'Aucun message pour le moment' }}</span>
+            {% if item.unread > 0 %}
+            <span class="unread-pill">{{ item.unread }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:40px 20px;color:var(--muted);">
+      <div style="font-size:32px;margin-bottom:8px;">💬</div>
+      <p>Aucune conversation active pour le moment.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Démarrer une nouvelle conversation -->
+  <div class="panel">
+    <div class="panel-header" style="margin-bottom:16px;">
+      <h3 style="margin:0;font-size:16px;font-weight:700;">Nouvelle conversation</h3>
+      <p style="color:var(--muted);font-size:13px;margin-top:4px;">
+        {% if current_user.role == 'patient' %}
+        Vous pouvez contacter les médecins avec qui vous avez un suivi (rendez-vous ou dossier médical).
+        {% else %}
+        Vous pouvez contacter vos patients disposant d'un compte utilisateur actif.
+        {% endif %}
+      </p>
+    </div>
+
+    {% if eligible_contacts %}
+    <form method="POST" action="{{ url_for('messages.start_conversation') }}" class="form-standard">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+      
+      {% if current_user.role == 'patient' %}
+      <div class="form-group" style="margin-bottom:16px;">
+        <label for="doctor_id" style="display:block;margin-bottom:6px;font-weight:600;font-size:13px;">Sélectionnez votre médecin :</label>
+        <select name="doctor_id" id="doctor_id" class="form-control" required style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);">
+          <option value="" disabled selected>-- Choisissez un médecin --</option>
+          {% for doc in eligible_contacts %}
+          <option value="{{ doc.id }}">Dr. {{ doc.email }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% else %}
+      <div class="form-group" style="margin-bottom:16px;">
+        <label for="patient_id" style="display:block;margin-bottom:6px;font-weight:600;font-size:13px;">Sélectionnez votre patient :</label>
+        <select name="patient_id" id="patient_id" class="form-control" required style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);">
+          <option value="" disabled selected>-- Choisissez un patient --</option>
+          {% for pat in eligible_contacts %}
+          <option value="{{ pat.id }}">{{ pat.full_name }} ({{ pat.account.email }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn" style="width:100%;">
+        ✉️ Démarrer la conversation
+      </button>
+    </form>
+    {% else %}
+    <div style="background:#f8fafc;border:1px dashed var(--border);border-radius:10px;padding:20px;text-align:center;color:var(--muted);font-size:13.5px;">
+      {% if current_user.role == 'patient' %}
+      Vous n'avez pas de nouveau médecin disponible pour initier une conversation.
+      {% else %}
+      Tous vos patients suivis ont déjà une conversation ouverte, ou n'ont pas encore activé de compte utilisateur.
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

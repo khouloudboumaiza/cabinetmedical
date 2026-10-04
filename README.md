@@ -265,3 +265,58 @@ Documenter cette limite honnêtement dans ton rapport (plutôt que de
 prétendre que c'est "impossible à contourner") montre une vraie maturité
 en sécurité — aucun mécanisme n'est invulnérable, ce qui compte c'est de
 savoir lequel choisir et pourquoi, et quelles hypothèses il repose sur.
+
+---
+
+## 12. Messagerie sécurisée Patient ↔ Médecin
+
+Le module de messagerie permet des échanges médicaux sécurisés et chiffrés de bout en bout entre un patient et ses médecins autorisés.
+
+### a) Routes de la messagerie
+
+| Méthode | Route | Description | Autorisation |
+|---|---|---|---|
+| `GET` | `/messages` | Liste des conversations actives et contacts éligibles avec compteur de non-lus | Patient ou Médecin |
+| `GET` | `/messages/<id>` | Affichage de la conversation, déchiffrement à la volée et marquage de lecture | Membre de la conversation uniquement (Patient ou Médecin lié) |
+| `POST` | `/messages/<id>/send` | Envoi d'un message chiffré AES-256-GCM avec AAD (`conversation_id`) | Membre de la conversation |
+| `GET` | `/messages/<id>/poll?after=<id>` | Polling AJAX (toutes les 5 s) des nouveaux messages | Membre de la conversation |
+| `POST` | `/messages/new` | Démarrage d'une conversation après vérification de la relation médicale | Patient vers médecin avec relation OU Médecin vers patient avec compte |
+
+### b) Sécurité et défense en profondeur
+
+1. **Chiffrement AES-256-GCM avec AAD** :
+   - Clé AES-256 (32 octets) partagée avec les dossiers médicaux (`ENCRYPTION_KEY`).
+   - Tirage d'un `nonce` cryptographique aléatoire et unique de 12 octets par message (`os.urandom(12)`).
+   - Intégration de l'identifiant `conversation_id` comme Données Associées Authentifiées (**AAD**) : empêche toute tentative de déplacer ou rejouer un message chiffré d'une conversation à une autre.
+   - Aucun texte en clair n'est stocké en base de données.
+
+2. **Contrôle d'accès strict & Anti-IDOR (404 systématique)** :
+   - Les rôles `admin` et `secretaire` sont **strictement exclus** de la messagerie : toute tentative renvoie une `404 Not Found` (avec journalisation d'audit).
+   - Un patient ou un médecin ne peut accéder qu'aux conversations dont il est directement membre.
+   - Toute tentative d'accès non autorisé par un identifiant d'URL manipulé (IDOR) renvoie une `404 Not Found` et génère automatiquement une `SecurityAlert` (type `idor_message_attempt`) via `detection.py`.
+
+3. **Protection CSRF (Formulaires et API Fetch)** :
+   - Validation stricte du token CSRF en temps constant (`hmac.compare_digest`) sur toutes les requêtes `POST`.
+   - Prise en charge des requêtes asynchrones `fetch` via l'en-tête `X-CSRFToken`.
+
+4. **Rate Limiting** :
+   - Limitation à l'envoi de **20 messages par minute par utilisateur** pour prévenir les attaques par déni de service ou saturation.
+
+5. **Validation & Protection Anti-XSS** :
+   - Nettoyage des chaînes (`strip`), rejet des messages vides ou excédant 2000 caractères.
+   - Échappement HTML automatique dans Jinja2 (aucun filtre `|safe`).
+   - Insertion côté client JavaScript via `textContent` exclusivement (jamais `innerHTML`).
+
+6. **Journalisation d'audit intègre (Log Integrity)** :
+   - Enregistrement des événements (ouverture de conversation, envoi de message, accès refusé) dans `message_logs`.
+   - Chaînage HMAC-SHA256 anti-falsification et triggers SQLite append-only.
+   - **Le contenu des messages n'est JAMAIS consigné dans les logs.**
+
+### c) Limite connue sur la clé de chiffrement
+
+- **Architecture actuelle (Chiffrement côté serveur / Symétrique)** :
+  La clé AES-256 est gérée au niveau du serveur (`secret_aes.key` ou variable `ENCRYPTION_KEY_HEX`).
+  - *Avantage* : Simple à maintenir, performant, permet aux patients et médecins d'accéder à leurs échanges depuis n'importe quel appareil sans gestion de trousseau complexe côté client.
+  - *Limite connue* : Un administrateur système disposant d'un accès root direct au serveur et à la mémoire du processus pourrait potentiellement extraire la clé symétrique et déchiffrer les messages.
+  - *Recommandation pour un déploiement hospitalier/HDS de grande échelle* : Évolution vers un chiffrement asymétrique de bout en bout (E2EE) avec paires de clés publiques/privées (ex: X25519 / Signal Protocol) générées et conservées exclusivement dans le navigateur/terminal des utilisateurs, ou intégration d'un module HSM / KMS pour la dérivation des clés.
+
