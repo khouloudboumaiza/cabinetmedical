@@ -51,6 +51,23 @@ class User(db.Model, UserMixin):
         """Vérifie si l'utilisateur a l'un des rôles donnés."""
         return self.role in roles
 
+    def unread_messages_count(self):
+        """Retourne le nombre total de messages non lus pour cet utilisateur."""
+        from models import Conversation, Message
+        if self.role == 'patient' and self.patient_profile:
+            return Message.query.join(Conversation).filter(
+                Conversation.patient_id == self.patient_profile.id,
+                Message.sender_id != self.id,
+                Message.read_at.is_(None)
+            ).count()
+        elif self.role == 'medecin':
+            return Message.query.join(Conversation).filter(
+                Conversation.doctor_id == self.id,
+                Message.sender_id != self.id,
+                Message.read_at.is_(None)
+            ).count()
+        return 0
+
     def __repr__(self):
         return f"<User {self.email} ({self.role})>"
 

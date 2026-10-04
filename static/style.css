@@ -677,6 +677,10 @@ body {
   word-break: break-word;
 }
 
+.message-text {
+  white-space: pre-wrap;
+}
+
 .message-bubble.me {
   background: linear-gradient(135deg, #0d9488, #0f766e);
   color: #ffffff;

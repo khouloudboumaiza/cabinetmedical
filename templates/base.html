@@ -60,8 +60,17 @@
 
       {% if current_user.role in ['patient', 'medecin'] %}
       <a href="{{ url_for('messages.index') }}"
-         class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('messages.') }}">
-        <span>💬</span> Messagerie
+         class="nav-item {{ 'active' if request.endpoint and request.endpoint.startswith('messages.') }}"
+         style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span>💬</span> Messagerie
+        </div>
+        {% set unread_count = current_user.unread_messages_count() %}
+        {% if unread_count > 0 %}
+        <span style="background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 10px;">
+          {{ unread_count }}
+        </span>
+        {% endif %}
       </a>
       {% endif %}
 
