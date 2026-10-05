@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Mes Notifications · MediCabinet{% endblock %}
+{% block crumb %}Notifications{% endblock %}
+{% block crumbsub %}Suivi de vos rendez-vous et alertes{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center;">
+    <h3 style="margin:0;">Mes Notifications</h3>
+    <div style="display:flex; gap:10px; align-items:center;">
+      {% set unread = notifications | selectattr('is_read', 'equalto', false) | list %}
+      {% if unread %}
+      <span class="badge" style="background:#fee2e2;color:#dc2626;">{{ unread|length }} non lue(s)</span>
+      {% endif %}
+      <span class="badge badge-info">{{ notifications|length }} au total</span>
+    </div>
+  </div>
+
+  {% if notifications %}
+  <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+    {% for notif in notifications %}
+    {% set type_color = {
+        'Retard': '#f59e0b',
+        'Annulation': '#ef4444',
+        'Modification': '#3b82f6',
+        'Refus': '#ef4444',
+        'Confirmation': '#10b981',
+        'Proposition': '#3b82f6',
+        'Information': '#6366f1'
+    } %}
+    {% set type_icon = {
+        'Retard': '⏳',
+        'Annulation': '❌',
+        'Modification': '🔄',
+        'Refus': '🔴',
+        'Confirmation': '✅',
+        'Proposition': '🔵',
+        'Information': 'ℹ️'
+    } %}
+    <div style="padding: 16px; border: 1px solid {{ 'var(--border)' if notif.is_read else '#d1fae5' }}; border-radius: 10px;
+                background: {{ '#fff' if notif.is_read else '#f0fdfa' }};
+                border-left: 4px solid {{ type_color.get(notif.notification_type, 'var(--primary)') if not notif.is_read else 'var(--border)' }};">
+
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 8px;">
+        <div style="font-weight: 700; font-size: 15px; display:flex; align-items:center; gap: 8px;">
+          {{ type_icon.get(notif.notification_type, '🔔') }}
+          {{ notif.notification_type }}
+          {% if not notif.is_read %}
+          <span style="font-size:10px;background:#ef4444;color:#fff;padding:2px 6px;border-radius:999px;font-weight:600;">NOUVEAU</span>
+          {% endif %}
+        </div>
+        <div style="font-size: 12px; color: var(--muted);">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+      </div>
+
+      <div style="font-size: 14px; margin-bottom: 12px; color: var(--ink); line-height: 1.6;">
+        {{ notif.message }}
+      </div>
+
+      {% if notif.appointment %}
+      <div style="font-size: 13px; color: var(--muted); margin-bottom: 12px; background: #f8fafc; padding: 10px 12px; border-radius: 6px; border:1px solid var(--border);">
+        <strong>📅 Rendez-vous :</strong>
+        {{ notif.appointment.scheduled_at.strftime('%d/%m/%Y à %H:%M') }}
+        — {{ notif.appointment.motif }}
+        — Dr. {{ notif.appointment.medecin.email }}
+      </div>
+      {% endif %}
+
+      {# Boutons Accepter/Refuser pour les propositions de créneau #}
+      {% if notif.notification_type == 'Proposition' and notif.appointment and notif.appointment.status == 'propose' %}
+      <div style="display:flex; gap:10px; margin-bottom:12px;">
+        <form method="POST" action="{{ url_for('cabinet.appointment_respond', rdv_id=notif.appointment.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+          <button class="btn btn-sm" name="choice" value="accept">✅ Accepter ce créneau</button>
+        </form>
+        <form method="POST" action="{{ url_for('cabinet.appointment_respond', rdv_id=notif.appointment.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+          <button class="btn btn-danger btn-sm" name="choice" value="refuse">❌ Refuser</button>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if not notif.is_read %}
+      <form method="POST" action="{{ url_for('cabinet.notification_read', id=notif.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+        <button type="submit" class="btn btn-outline btn-sm">Marquer comme lue</button>
+      </form>
+      {% else %}
+      <span style="font-size: 12px; color: var(--muted);">✔ Lue</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="padding: 40px 20px; text-align: center; color: var(--muted);">
+    <div style="font-size: 32px; margin-bottom: 12px;">📭</div>
+    Aucune notification pour le moment.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

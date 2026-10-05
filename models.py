@@ -68,6 +68,13 @@ class User(db.Model, UserMixin):
             ).count()
         return 0
 
+    def unread_notifications_count(self):
+        """Retourne le nombre de notifications non lues."""
+        from models import PatientNotification
+        if self.role == 'patient' and self.patient_profile:
+            return PatientNotification.query.filter_by(patient_id=self.patient_profile.id, is_read=False).count()
+        return 0
+
     def __repr__(self):
         return f"<User {self.email} ({self.role})>"
 
@@ -132,8 +139,12 @@ class Appointment(db.Model):
     motif = db.Column(db.String(255), nullable=False)
     notes = db.Column(db.Text, nullable=True)
 
-    # planifie | confirme | termine | annule
+    # planifie | confirme | termine | annule | en_attente | propose | refuse
     status = db.Column(db.String(20), default="planifie")
+
+    # Champs pour le workflow demande patient
+    requested_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    proposed_at = db.Column(db.DateTime, nullable=True)   # nouveau créneau proposé par secrétaire
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -290,3 +301,26 @@ class MessageLog(db.Model):
 
     def __repr__(self):
         return f"<MessageLog #{self.id} action={self.action} user={self.user_id}>"
+
+class PatientNotification(db.Model):
+    """Notifications envoyées aux patients (retard, annulation, modification, etc.)"""
+
+    __tablename__ = "patient_notifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("patients.id"), nullable=False)
+    appointment_id = db.Column(db.Integer, db.ForeignKey("appointments.id"), nullable=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    notification_type = db.Column(db.String(50), nullable=False) # Retard, Annulation, Modification, Information
+    message = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    patient = db.relationship("Patient", backref=db.backref("notifications", lazy="dynamic", cascade="all, delete-orphan"))
+    appointment = db.relationship("Appointment", backref="notifications")
+    sender = db.relationship("User", foreign_keys=[sender_id])
+
+    def __repr__(self):
+        return f"<PatientNotification {self.notification_type} patient={self.patient_id}>"

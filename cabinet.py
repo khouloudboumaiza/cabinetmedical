@@ -221,6 +221,35 @@ def patient_delete(patient_id):
 # Rendez-vous
 # ─────────────────────────────────────────────────────────────
 
+def send_notification(patient_id, sender_id, notif_type, message, appointment_id=None):
+    """Utilitaire centralisé — crée une PatientNotification.
+    Réutilise le modèle existant sans dupliquer la logique."""
+    from models import PatientNotification
+    notif = PatientNotification(
+        patient_id=patient_id,
+        appointment_id=appointment_id,
+        sender_id=sender_id,
+        notification_type=notif_type,
+        message=message,
+        is_read=False,
+    )
+    db.session.add(notif)
+    # pas de commit ici : le caller doit commiter en bloc
+
+# ── Notifications secrétaire (internes) ───────────────────────
+def _notify_secretariat(rdv, message):
+    """Notifie toutes les secrétaires d'un événement patient."""
+    secretaires = User.query.filter_by(role='secretaire').all()
+    for sec in secretaires:
+        # On envoie la notif vers un patient fictif : on log plutôt en alerte
+        from detection import create_alert
+        create_alert(
+            user_id=sec.id,
+            alert_type='appointment_request',
+            details=message
+        )
+
+
 @cabinet_bp.route("/appointments")
 @login_required
 def appointments():
@@ -247,8 +276,20 @@ def appointments():
         except ValueError:
             pass
 
-    all_appts = query.order_by(Appointment.scheduled_at.desc()).all()
-    return render_template("appointments.html", appointments=all_appts, jour=jour_str)
+    # Séparer les demandes en attente pour la secrétaire
+    pending_requests = []
+    if current_user.role in ['secretaire', 'admin']:
+        pending_requests = Appointment.query.filter(
+            Appointment.status == 'en_attente'
+        ).order_by(Appointment.created_at.desc()).all()
+
+    all_appts = query.filter(
+        Appointment.status != 'en_attente'
+    ).order_by(Appointment.scheduled_at.desc()).all() if current_user.role in ['secretaire','admin'] else \
+        query.order_by(Appointment.scheduled_at.desc()).all()
+
+    return render_template("appointments.html", appointments=all_appts,
+                           jour=jour_str, pending_requests=pending_requests)
 
 
 @cabinet_bp.route("/appointments/new", methods=["GET", "POST"])
@@ -273,10 +314,9 @@ def appointment_new():
                 scheduled_at = None
 
             if scheduled_at:
-                # Anti-conflit : même médecin, même créneau
                 conflict = Appointment.query.filter(
                     Appointment.medecin_id == medecin_id,
-                    Appointment.status.in_(["planifie", "confirme"]),
+                    Appointment.status.in_(["planifie", "confirme", "en_attente"]),
                     Appointment.scheduled_at == scheduled_at,
                 ).first()
                 if conflict:
@@ -289,8 +329,19 @@ def appointment_new():
                         duration_minutes=duration,
                         motif=motif,
                         notes=notes,
+                        status="confirme",
                     )
                     db.session.add(rdv)
+                    db.session.flush()
+                    # Notifier le patient de la confirmation directe
+                    medecin = User.query.get(medecin_id)
+                    send_notification(
+                        patient_id=patient_id,
+                        sender_id=current_user.id,
+                        notif_type="Confirmation",
+                        message=f"Votre rendez-vous avec Dr {medecin.email} est confirmé pour le {scheduled_at.strftime('%d/%m/%Y à %H:%M')}.",
+                        appointment_id=rdv.id
+                    )
                     db.session.commit()
                     flash("Rendez-vous planifié avec succès.", "success")
                     return redirect(url_for("cabinet.appointments"))
@@ -300,18 +351,176 @@ def appointment_new():
     return render_template("appointment_form.html", patients=patients, medecins=medecins)
 
 
+@cabinet_bp.route("/appointments/request", methods=["GET", "POST"])
+@login_required
+@role_required("patient")
+def appointment_request():
+    """Patient soumet une demande de rendez-vous → statut en_attente."""
+    if not current_user.patient_profile:
+        flash("Vous n'avez pas de profil patient associé.", "error")
+        return redirect(url_for("cabinet.dashboard"))
+
+    if request.method == "POST":
+        medecin_id = int(request.form.get("medecin_id", 0))
+        scheduled_str = request.form.get("scheduled_at", "")
+        motif = request.form.get("motif", "").strip() or "Consultation"
+
+        if not medecin_id or not scheduled_str:
+            flash("Veuillez sélectionner un médecin et une date.", "error")
+        else:
+            try:
+                scheduled_at = datetime.fromisoformat(scheduled_str)
+            except ValueError:
+                flash("Format de date invalide.", "error")
+                scheduled_at = None
+
+            if scheduled_at:
+                rdv = Appointment(
+                    patient_id=current_user.patient_profile.id,
+                    medecin_id=medecin_id,
+                    scheduled_at=scheduled_at,
+                    motif=motif,
+                    status="en_attente",
+                    requested_by=current_user.id,
+                )
+                db.session.add(rdv)
+                db.session.flush()
+                # Notifier la secrétaire
+                medecin = User.query.get(medecin_id)
+                _notify_secretariat(
+                    rdv,
+                    f"Nouvelle demande de rendez-vous : {current_user.patient_profile.full_name} "
+                    f"souhaite voir Dr {medecin.email} le {scheduled_at.strftime('%d/%m/%Y à %H:%M')}."
+                )
+                db.session.commit()
+                flash("Votre demande a été envoyée. La secrétaire vous contactera bientôt.", "success")
+                return redirect(url_for("cabinet.appointments"))
+
+    medecins = User.query.filter_by(role="medecin").order_by(User.email).all()
+    return render_template("appointment_request_form.html", medecins=medecins)
+
+
 @cabinet_bp.route("/appointments/<int:rdv_id>/status", methods=["POST"])
 @login_required
 @staff_required
 def appointment_status(rdv_id):
     rdv = Appointment.query.get_or_404(rdv_id)
     new_status = request.form.get("status")
-    allowed = {"confirme", "termine", "annule"}
-    if new_status in allowed:
+    proposed_str = request.form.get("proposed_at", "").strip()
+    reason = request.form.get("reason", "").strip()
+    medecin = User.query.get(rdv.medecin_id)
+
+    if new_status == "confirme":
+        # Vérifier conflit avant confirmation
+        conflict = Appointment.query.filter(
+            Appointment.medecin_id == rdv.medecin_id,
+            Appointment.status.in_(["planifie", "confirme"]),
+            Appointment.scheduled_at == rdv.scheduled_at,
+            Appointment.id != rdv.id,
+        ).first()
+        if conflict:
+            flash("Conflit de créneau détecté. Proposez un autre horaire.", "error")
+            return redirect(url_for("cabinet.appointments"))
+        rdv.status = "confirme"
+        send_notification(
+            patient_id=rdv.patient_id,
+            sender_id=current_user.id,
+            notif_type="Confirmation",
+            message=f"Votre rendez-vous avec Dr {medecin.email} est confirmé pour le {rdv.scheduled_at.strftime('%d/%m/%Y à %H:%M')}.",
+            appointment_id=rdv.id
+        )
+        flash("Rendez-vous confirmé. Notification envoyée au patient.", "success")
+
+    elif new_status == "propose":
+        if not proposed_str:
+            flash("Veuillez saisir la date/heure du nouveau créneau proposé.", "error")
+            return redirect(url_for("cabinet.appointments"))
+        try:
+            proposed_at = datetime.fromisoformat(proposed_str)
+        except ValueError:
+            flash("Format de date invalide.", "error")
+            return redirect(url_for("cabinet.appointments"))
+        rdv.status = "propose"
+        rdv.proposed_at = proposed_at
+        send_notification(
+            patient_id=rdv.patient_id,
+            sender_id=current_user.id,
+            notif_type="Proposition",
+            message=f"Le créneau demandé n'est pas disponible. Le secrétariat vous propose le {proposed_at.strftime('%d/%m/%Y à %H:%M')} avec Dr {medecin.email}.",
+            appointment_id=rdv.id
+        )
+        flash("Proposition envoyée au patient.", "success")
+
+    elif new_status == "refuse":
+        rdv.status = "annule"
+        msg = f"Votre demande de rendez-vous du {rdv.scheduled_at.strftime('%d/%m/%Y à %H:%M')} n'a pas pu être acceptée."
+        if reason:
+            msg += f" Raison : {reason}"
+        send_notification(
+            patient_id=rdv.patient_id,
+            sender_id=current_user.id,
+            notif_type="Refus",
+            message=msg,
+            appointment_id=rdv.id
+        )
+        flash("Demande refusée. Notification envoyée au patient.", "success")
+
+    elif new_status in {"termine", "annule"}:
         rdv.status = new_status
-        db.session.commit()
+        if new_status == "annule":
+            send_notification(
+                patient_id=rdv.patient_id,
+                sender_id=current_user.id,
+                notif_type="Annulation",
+                message=f"Votre rendez-vous du {rdv.scheduled_at.strftime('%d/%m/%Y à %H:%M')} a été annulé.",
+                appointment_id=rdv.id
+            )
         flash(f"Statut mis à jour : {new_status}.", "success")
+
+    db.session.commit()
     return redirect(url_for("cabinet.appointments"))
+
+
+@cabinet_bp.route("/appointments/<int:rdv_id>/respond", methods=["POST"])
+@login_required
+@role_required("patient")
+def appointment_respond(rdv_id):
+    """Patient accepte ou refuse la proposition de créneau de la secrétaire."""
+    rdv = Appointment.query.get_or_404(rdv_id)
+    pat = current_user.patient_profile
+    if not pat or rdv.patient_id != pat.id:
+        abort(403)
+    if rdv.status != "propose":
+        flash("Cette demande n'est plus en attente de réponse.", "error")
+        return redirect(url_for("cabinet.appointments"))
+
+    choice = request.form.get("choice")
+    medecin = User.query.get(rdv.medecin_id)
+
+    if choice == "accept":
+        rdv.scheduled_at = rdv.proposed_at
+        rdv.proposed_at = None
+        rdv.status = "confirme"
+        # Notifier secrétariat
+        _notify_secretariat(rdv, f"{pat.full_name} a accepté le créneau proposé : {rdv.scheduled_at.strftime('%d/%m/%Y à %H:%M')}.")
+        # Confirmation patient
+        send_notification(
+            patient_id=rdv.patient_id,
+            sender_id=current_user.id,
+            notif_type="Confirmation",
+            message=f"Votre rendez-vous avec Dr {medecin.email} est confirmé pour le {rdv.scheduled_at.strftime('%d/%m/%Y à %H:%M')}.",
+            appointment_id=rdv.id
+        )
+        db.session.commit()
+        flash("Rendez-vous confirmé avec le nouveau créneau.", "success")
+    elif choice == "refuse":
+        rdv.status = "annule"
+        _notify_secretariat(rdv, f"{pat.full_name} a refusé le créneau proposé. La demande est annulée.")
+        db.session.commit()
+        flash("Proposition refusée. Vous pouvez effectuer une nouvelle demande.", "info")
+
+    return redirect(url_for("cabinet.appointments"))
+
 
 
 # ─────────────────────────────────────────────────────────────
@@ -455,3 +664,72 @@ def prescription_print(rx_id):
     except Exception:
         medications = "[Erreur de déchiffrement]"
     return render_template("prescription_print.html", rx=rx, medications=medications)
+from models import PatientNotification
+from detection import create_alert
+
+@cabinet_bp.route('/notifications')
+@login_required
+@role_required('patient')
+def notifications():
+    if not current_user.patient_profile:
+        flash('Vous n\'avez pas de profil patient associé.', 'error')
+        return redirect(url_for('cabinet.dashboard'))
+    
+    notifs = PatientNotification.query.filter_by(patient_id=current_user.patient_profile.id).order_by(PatientNotification.created_at.desc()).all()
+    return render_template('notifications.html', notifications=notifs)
+
+@cabinet_bp.route('/notifications/<int:id>/read', methods=['POST'])
+@login_required
+@role_required('patient')
+def notification_read(id):
+    if not current_user.patient_profile:
+        abort(403)
+        
+    notif = PatientNotification.query.get_or_404(id)
+    if notif.patient_id != current_user.patient_profile.id:
+        abort(403)
+        
+    notif.is_read = True
+    db.session.commit()
+    return redirect(url_for('cabinet.notifications'))
+
+@cabinet_bp.route('/notifications/new', methods=['GET', 'POST'])
+@login_required
+@staff_required
+def notification_new():
+    if current_user.role not in ['admin', 'secretaire']:
+        abort(403)
+        
+    if request.method == 'POST':
+        patient_id = request.form.get('patient_id')
+        appointment_id = request.form.get('appointment_id') or None
+        notif_type = request.form.get('notification_type')
+        message = request.form.get('message')
+        
+        if not patient_id or not notif_type or not message:
+            flash('Veuillez remplir tous les champs obligatoires.', 'error')
+            return redirect(url_for('cabinet.notification_new'))
+            
+        notif = PatientNotification(
+            patient_id=patient_id,
+            appointment_id=appointment_id,
+            sender_id=current_user.id,
+            notification_type=notif_type,
+            message=message
+        )
+        db.session.add(notif)
+        db.session.commit()
+        
+        create_alert(
+            user_id=current_user.id,
+            alert_type='info',
+            details=f'Notification envoyée au patient {patient_id} ({notif_type})'
+        )
+        
+        flash('Notification envoyée au patient avec succès.', 'success')
+        return redirect(url_for('cabinet.notification_new'))
+        
+    patients = Patient.query.all()
+    appointments = Appointment.query.filter(Appointment.status.in_(['planifie', 'confirme'])).all()
+    return render_template('notification_form.html', patients=patients, appointments=appointments)
+

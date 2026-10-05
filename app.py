@@ -34,6 +34,19 @@ def create_app():
     def inject_csrf_token():
         return dict(csrf_token=get_or_create_csrf_token)
 
+    @app.context_processor
+    def inject_pending_rdv_count():
+        """Injecte le nombre de demandes de RDV en attente pour la secrétaire."""
+        from flask_login import current_user
+        from models import Appointment
+        try:
+            if current_user.is_authenticated and current_user.role in ('secretaire', 'admin'):
+                count = Appointment.query.filter_by(status='en_attente').count()
+                return dict(pending_rdv_count=count)
+        except Exception:
+            pass
+        return dict(pending_rdv_count=0)
+
     # --- Blueprints ---
     app.register_blueprint(auth_bp)
     app.register_blueprint(oauth_bp)

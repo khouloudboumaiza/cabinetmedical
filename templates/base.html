@@ -42,10 +42,30 @@
 
       {% if current_user.role != 'admin' %}
       <a href="{{ url_for('cabinet.appointments') }}"
-         class="nav-item {{ 'active' if request.endpoint in ['cabinet.appointments','cabinet.appointment_new'] }}">
-        <span>📅</span> Rendez-vous
+         class="nav-item {{ 'active' if request.endpoint in ['cabinet.appointments','cabinet.appointment_new','cabinet.appointment_request'] }}"
+         style="display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span>📅</span> Rendez-vous
+        </div>
+        {% if current_user.role == 'secretaire' %}
+          {% set pending_count = 0 %}
+          {# Badge des demandes en attente pour la secrétaire #}
+          {% if pending_rdv_count is defined and pending_rdv_count > 0 %}
+          <span style="background: #f59e0b; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 10px;">
+            {{ pending_rdv_count }}
+          </span>
+          {% endif %}
+        {% endif %}
+      </a>
+      {% if current_user.role == 'patient' %}
+      <a href="{{ url_for('cabinet.appointment_request') }}"
+         class="nav-item {{ 'active' if request.endpoint == 'cabinet.appointment_request' }}"
+         style="margin-left: 18px; font-size: 13px; color: var(--muted);">
+        <span>➕</span> Demander un RDV
       </a>
       {% endif %}
+      {% endif %}
+
 
       {% if current_user.patient_profile %}
       <a href="{{ url_for('cabinet.records', patient_id=current_user.patient_profile.id) }}"
@@ -55,6 +75,26 @@
       <a href="{{ url_for('cabinet.prescriptions', patient_id=current_user.patient_profile.id) }}"
          class="nav-item {{ 'active' if request.endpoint in ['cabinet.prescriptions','cabinet.prescription_new','cabinet.prescription_view'] }}">
         <span>💊</span> Mes ordonnances
+      </a>
+      <a href="{{ url_for('cabinet.notifications') }}"
+         class="nav-item {{ 'active' if request.endpoint == 'cabinet.notifications' }}"
+         style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span>🔔</span> Mes Notifications
+        </div>
+        {% set unread_notifs = current_user.unread_notifications_count() %}
+        {% if unread_notifs > 0 %}
+        <span style="background: #ef4444; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 10px;">
+          {{ unread_notifs }}
+        </span>
+        {% endif %}
+      </a>
+      {% endif %}
+
+      {% if current_user.role == 'secretaire' %}
+      <a href="{{ url_for('cabinet.notification_new') }}"
+         class="nav-item {{ 'active' if request.endpoint == 'cabinet.notification_new' }}">
+        <span>📢</span> Envoyer Notification
       </a>
       {% endif %}
 
@@ -118,7 +158,7 @@
         <h1>{% block crumb %}Tableau de bord{% endblock %}</h1>
         <div class="sub">{% block crumbsub %}{% endblock %}</div>
       </div>
-      <span class="pill">🔒 Système sécurisé · AES-256 · HMAC</span>
+     
     </header>
 
     <div class="content">

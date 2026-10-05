@@ -9,8 +9,8 @@
     <h2>Rendez-vous</h2>
     <p>{{ appointments|length }} enregistrement(s)</p>
   </div>
-  {% if current_user.has_role('secretaire','admin') %}
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    {% if current_user.has_role('secretaire','admin') %}
     <form method="GET" style="display:flex;gap:8px;align-items:center">
       <label style="font-size:13px;color:var(--muted);font-weight:500">Filtrer par jour :</label>
       <input type="date" name="jour" value="{{ jour or '' }}"
@@ -19,9 +19,7 @@
       {% if jour %}<a href="{{ url_for('cabinet.appointments') }}" style="font-size:13px;color:var(--muted)">✕ Effacer</a>{% endif %}
     </form>
     <a class="btn" href="{{ url_for('cabinet.appointment_new') }}">+ Nouveau rendez-vous</a>
-  </div>
-  {% elif current_user.role == 'medecin' %}
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    {% elif current_user.role == 'medecin' %}
     <form method="GET" style="display:flex;gap:8px;align-items:center">
       <label style="font-size:13px;color:var(--muted);font-weight:500">Filtrer par jour :</label>
       <input type="date" name="jour" value="{{ jour or '' }}"
@@ -29,15 +27,110 @@
              onchange="this.form.submit()">
       {% if jour %}<a href="{{ url_for('cabinet.appointments') }}" style="font-size:13px;color:var(--muted)">✕ Effacer</a>{% endif %}
     </form>
+    {% elif current_user.role == 'patient' %}
+    <a class="btn" href="{{ url_for('cabinet.appointment_request') }}">📅 Demander un rendez-vous</a>
+    {% endif %}
   </div>
-  {% endif %}
 </div>
 
+{# ── Section : Demandes en attente (Secrétaire) ──────────────── #}
+{% if current_user.has_role('secretaire','admin') and pending_requests %}
+<div class="panel" style="border-left: 4px solid #f59e0b; margin-bottom: 24px;">
+  <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;">
+    <h3 style="margin:0;">🟠 Demandes en attente de traitement</h3>
+    <span class="badge" style="background:#fef3c7;color:#92400e;">{{ pending_requests|length }} demande(s)</span>
+  </div>
+  <table class="table" style="margin-top:12px;">
+    <thead>
+      <tr>
+        <th>Date souhaitée</th>
+        <th>Patient</th>
+        <th>Médecin</th>
+        <th>Motif</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rdv in pending_requests %}
+      <tr>
+        <td class="mono">{{ rdv.scheduled_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td><a class="link" href="{{ url_for('cabinet.patient_detail', patient_id=rdv.patient_id) }}">{{ rdv.patient.full_name }}</a></td>
+        <td>Dr. {{ rdv.medecin.email }}</td>
+        <td>{{ rdv.motif }}</td>
+        <td>
+          {# Formulaire multi-action avec champ caché pour la proposition #}
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            {# Confirmer #}
+            <form method="POST" action="{{ url_for('cabinet.appointment_status', rdv_id=rdv.id) }}" style="display:flex;gap:6px;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+              <button class="btn btn-sm" name="status" value="confirme">✅ Confirmer</button>
+              <button class="btn btn-danger btn-sm" name="status" value="refuse" onclick="return confirm('Refuser cette demande ?')">❌ Refuser</button>
+            </form>
+            {# Proposer un autre créneau #}
+            <details style="border:1px solid var(--border);border-radius:8px;padding:8px;">
+              <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--primary);">🔄 Proposer un autre créneau</summary>
+              <form method="POST" action="{{ url_for('cabinet.appointment_status', rdv_id=rdv.id) }}" style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+                <input type="hidden" name="status" value="propose">
+                <input type="datetime-local" name="proposed_at" required style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+                <button class="btn btn-sm" type="submit">Envoyer</button>
+              </form>
+            </details>
+            {# Refuser avec raison #}
+            <details style="border:1px solid var(--border);border-radius:8px;padding:8px;">
+              <summary style="cursor:pointer;font-size:13px;font-weight:600;color:#dc2626;">✉️ Refuser avec message</summary>
+              <form method="POST" action="{{ url_for('cabinet.appointment_status', rdv_id=rdv.id) }}" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+                <input type="hidden" name="status" value="refuse">
+                <input type="text" name="reason" placeholder="Raison du refus (optionnel)" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+                <button class="btn btn-danger btn-sm" type="submit">Envoyer le refus</button>
+              </form>
+            </details>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ── Section : Propositions en attente de réponse Patient ───── #}
+{% if current_user.role == 'patient' %}
+{% set proposed_rdvs = appointments | selectattr('status', 'equalto', 'propose') | list %}
+{% if proposed_rdvs %}
+<div class="panel" style="border-left: 4px solid #3b82f6; margin-bottom: 24px;">
+  <div class="panel-head">
+    <h3 style="margin:0;">🔵 Proposition(s) de créneaux — Votre réponse est attendue</h3>
+  </div>
+  {% for rdv in proposed_rdvs %}
+  <div style="margin-top:14px;padding:14px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;">
+    <p style="margin:0 0 6px 0;font-size:14px;">
+      <strong>Créneau proposé :</strong> {{ rdv.proposed_at.strftime('%d/%m/%Y à %H:%M') }} avec Dr. {{ rdv.medecin.email }}
+    </p>
+    <p style="margin:0 0 12px 0;font-size:13px;color:var(--muted);">Demande initiale : {{ rdv.scheduled_at.strftime('%d/%m/%Y à %H:%M') }}</p>
+    <div style="display:flex;gap:10px;">
+      <form method="POST" action="{{ url_for('cabinet.appointment_respond', rdv_id=rdv.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+        <button class="btn btn-sm" name="choice" value="accept">✅ Accepter</button>
+      </form>
+      <form method="POST" action="{{ url_for('cabinet.appointment_respond', rdv_id=rdv.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+        <button class="btn btn-danger btn-sm" name="choice" value="refuse">❌ Refuser</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+
+{# ── Liste principale des RDV ─────────────────────────────────── #}
 <div class="panel">
   <table class="table">
     <thead>
       <tr>
-        <th>Date & heure</th>
+        <th>Date &amp; heure</th>
         <th>Patient</th>
         <th>Médecin</th>
         <th>Motif</th>
@@ -48,13 +141,12 @@
     </thead>
     <tbody>
       {% for rdv in appointments %}
+      {% if rdv.status != 'propose' or current_user.role != 'patient' %}
       <tr>
         <td class="mono">{{ rdv.scheduled_at.strftime('%d/%m/%Y %H:%M') }}</td>
         <td>
           {% if current_user.has_role('secretaire','medecin','admin') %}
-          <a class="link" href="{{ url_for('cabinet.patient_detail', patient_id=rdv.patient_id) }}">
-            {{ rdv.patient.full_name }}
-          </a>
+          <a class="link" href="{{ url_for('cabinet.patient_detail', patient_id=rdv.patient_id) }}">{{ rdv.patient.full_name }}</a>
           {% else %}
           {{ rdv.patient.full_name }}
           {% endif %}
@@ -64,15 +156,21 @@
         <td>{{ rdv.duration_minutes }} min</td>
         <td>
           <span class="badge badge-{{ rdv.status }}">
-            {{ rdv.status|replace('planifie','Planifié')|replace('confirme','Confirmé')|replace('termine','Terminé')|replace('annule','Annulé') }}
+            {{ rdv.status
+               | replace('planifie','Planifié')
+               | replace('confirme','Confirmé')
+               | replace('termine','Terminé')
+               | replace('annule','Annulé')
+               | replace('en_attente','En attente')
+               | replace('propose','Proposition envoyée')
+               | replace('refuse','Refusé') }}
           </span>
         </td>
         {% if current_user.has_role('secretaire','medecin','admin') %}
         <td>
           {% if rdv.status in ['planifie','confirme'] %}
-          <form method="POST"
-                action="{{ url_for('cabinet.appointment_status', rdv_id=rdv.id) }}"
-                style="display:flex;gap:6px;flex-wrap:wrap">
+          <form method="POST" action="{{ url_for('cabinet.appointment_status', rdv_id=rdv.id) }}" style="display:flex;gap:6px;flex-wrap:wrap">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
             {% if rdv.status == 'planifie' %}
             <button class="btn btn-sm" name="status" value="confirme">Confirmer</button>
             {% endif %}
@@ -85,6 +183,7 @@
         </td>
         {% endif %}
       </tr>
+      {% endif %}
       {% else %}
       <tr>
         <td colspan="7" style="color:var(--muted);text-align:center;padding:40px">

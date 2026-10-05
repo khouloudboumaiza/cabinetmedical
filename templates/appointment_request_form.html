@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Demander un rendez-vous · MediCabinet{% endblock %}
+{% block crumb %}Mes rendez-vous{% endblock %}
+{% block crumbsub %}Envoyer une demande au secrétariat{% endblock %}
+
+{% block content %}
+<div class="form-card">
+  <div class="panel-head" style="margin-bottom: 20px;">
+    <h3 style="margin:0;">📅 Demander un rendez-vous</h3>
+    <p style="color:var(--muted);font-size:13px;margin-top:6px;">
+      Votre demande sera transmise au secrétariat qui confirmera ou proposera un autre créneau.
+    </p>
+  </div>
+
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+
+    <div class="field">
+      <label for="medecin_id">Médecin souhaité *</label>
+      <select name="medecin_id" id="medecin_id" required>
+        <option value="">-- Choisissez un médecin --</option>
+        {% for doc in medecins %}
+        <option value="{{ doc.id }}">Dr. {{ doc.email }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="scheduled_at">Date et heure souhaitées *</label>
+      <input type="datetime-local" name="scheduled_at" id="scheduled_at" required>
+    </div>
+
+    <div class="field">
+      <label for="motif">Motif de la consultation</label>
+      <input type="text" name="motif" id="motif" placeholder="Consultation générale, suivi, urgence…" value="Consultation">
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:16px;">
+      <button type="submit" class="btn" style="flex:1;">
+        📤 Envoyer la demande
+      </button>
+      <a href="{{ url_for('cabinet.appointments') }}" class="btn btn-outline" style="flex:1; text-align:center;">
+        Annuler
+      </a>
+    </div>
+  </form>
+
+  <div style="margin-top:20px; padding:14px; background:#f0fdfa; border-radius:8px; border:1px solid #99f6e4; font-size:13px; color:#0f766e;">
+    🔔 Vous recevrez une notification dans votre espace dès que le secrétariat aura traité votre demande.
+  </div>
+</div>
+{% endblock %}

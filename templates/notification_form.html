@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Envoyer une notification · MediCabinet{% endblock %}
+{% block crumb %}Notifications{% endblock %}
+{% block crumbsub %}Informer un patient (Retard, Annulation, etc.){% endblock %}
+
+{% block content %}
+<div class="form-card">
+  <div class="panel-head" style="margin-bottom: 20px;">
+    <h3 style="margin:0;">Nouvelle notification patient</h3>
+  </div>
+
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+
+    <div class="field">
+      <label for="patient_id">Patient destinataire *</label>
+      <select name="patient_id" id="patient_id" required>
+        <option value="">-- Sélectionnez un patient --</option>
+        {% for pat in patients %}
+        <option value="{{ pat.id }}">{{ pat.full_name }} ({{ pat.phone or 'Pas de tel' }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="appointment_id">Rendez-vous concerné (optionnel)</label>
+      <select name="appointment_id" id="appointment_id">
+        <option value="">-- Aucun rendez-vous spécifique --</option>
+        {% for appt in appointments %}
+        <option value="{{ appt.id }}">{{ appt.patient.full_name }} - {{ appt.scheduled_at.strftime('%d/%m/%Y %H:%M') }} (Dr. {{ appt.medecin.email }})</option>
+        {% endfor %}
+      </select>
+      <small style="color:var(--muted); font-size:12px;">Associez cette notification à un rendez-vous pour plus de contexte.</small>
+    </div>
+
+    <div class="field">
+      <label for="notification_type">Type de notification *</label>
+      <select name="notification_type" id="notification_type" required>
+        <option value="Retard">⏳ Retard du médecin</option>
+        <option value="Annulation">❌ Annulation</option>
+        <option value="Modification">🔄 Modification d'horaire</option>
+        <option value="Information">ℹ️ Information importante</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="message">Message *</label>
+      <textarea name="message" id="message" rows="4" required placeholder="Saisissez le message exact qui sera affiché au patient..."></textarea>
+      <small style="color:var(--muted); font-size:12px;">Exemple : Votre médecin aura environ 30 minutes de retard. Merci de patienter.</small>
+    </div>
+
+    <button type="submit" class="btn" style="width: 100%; margin-top: 10px;">
+      📤 Envoyer la notification
+    </button>
+  </form>
+</div>
+
+<script>
+  // Simple JS to auto-fill generic templates based on the type
+  const typeSelect = document.getElementById('notification_type');
+  const messageBox = document.getElementById('message');
+
+  typeSelect.addEventListener('change', (e) => {
+    if (messageBox.value.trim() !== '') return; // Ne pas écraser si l'utilisateur a déjà écrit
+    
+    switch(e.target.value) {
+      case 'Retard':
+        messageBox.value = 'Votre médecin aura environ 30 minutes de retard. Merci de votre compréhension et de bien vouloir patienter.';
+        break;
+      case 'Annulation':
+        messageBox.value = 'Votre rendez-vous a malheureusement dû être annulé. Veuillez contacter le secrétariat pour en planifier un nouveau.';
+        break;
+      case 'Modification':
+        messageBox.value = 'Votre rendez-vous a été déplacé. Veuillez vérifier le nouvel horaire dans votre espace ou nous contacter.';
+        break;
+      case 'Information':
+        messageBox.value = '';
+        break;
+    }
+  });
+</script>
+{% endblock %}

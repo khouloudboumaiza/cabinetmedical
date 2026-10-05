@@ -4,9 +4,7 @@
 {% block crumbsub %}Échanges chiffrés de bout en bout entre patient et médecin{% endblock %}
 
 {% block content %}
-<div class="encrypt-note">
-  🔒 <strong>Messagerie chiffrée AES-256-GCM</strong> avec données associées authentifiées (AAD). Les administrateurs et secrétaires n'ont aucun accès.
-</div>
+
 
 <div class="messages-container-grid">
   <!-- Liste des conversations -->
@@ -47,61 +45,156 @@
   </div>
 
   <!-- Démarrer une nouvelle conversation -->
-  <div>
-    <div class="panel">
-      <div class="panel-head">
-        <h3 style="margin:0;font-size:16px;font-weight:700;">Nouvelle conversation</h3>
-      </div>
-      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
-        {% if current_user.role == 'patient' %}
-        Vous pouvez contacter les médecins avec qui vous avez un suivi (rendez-vous ou dossier médical).
-        {% else %}
-        Vous pouvez contacter vos patients disposant d'un compte utilisateur actif.
-        {% endif %}
-      </p>
+ <div>
+  <div class="panel">
+    <div class="panel-head">
+      <h3 style="margin:0;font-size:16px;font-weight:700;color:#0F172A;">Nouvelle conversation</h3>
+    </div>
 
-      {% if eligible_contacts %}
-      <div class="form-card" style="box-shadow:none; padding:0;">
-        <form method="POST" action="{{ url_for('messages.start_conversation') }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
-          
-          {% if current_user.role == 'patient' %}
-          <div class="field">
-            <label for="doctor_id">Sélectionnez votre médecin :</label>
-            <select name="doctor_id" id="doctor_id" required>
-              <option value="" disabled selected>-- Choisissez un médecin --</option>
-              {% for doc in eligible_contacts %}
-              <option value="{{ doc.id }}">Dr. {{ doc.email }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          {% else %}
-          <div class="field">
-            <label for="patient_id">Sélectionnez votre patient :</label>
-            <select name="patient_id" id="patient_id" required>
-              <option value="" disabled selected>-- Choisissez un patient --</option>
-              {% for pat in eligible_contacts %}
-              <option value="{{ pat.id }}">{{ pat.full_name }} ({{ pat.account.email }})</option>
-              {% endfor %}
-            </select>
-          </div>
-          {% endif %}
+    <p style="color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 20px;">
+      {% if current_user.role == 'patient' %}
+      Vous pouvez contacter les médecins avec qui vous avez un suivi (rendez-vous ou dossier médical).
+      {% else %}
+      Vous pouvez contacter vos patients disposant d'un compte utilisateur actif.
+      {% endif %}
+    </p>
 
-          <button type="submit" class="btn" style="width:100%; margin-top: 10px;">
-            ✉️ Démarrer la conversation
-          </button>
-        </form>
+    {% if eligible_contacts %}
+    <form method="POST" action="{{ url_for('messages.start_conversation') }}" class="new-conv-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+
+      {% if current_user.role == 'patient' %}
+      <div class="field">
+        <label for="doctor_id">Sélectionnez votre médecin</label>
+        <div class="select-wrap">
+          <select name="doctor_id" id="doctor_id" required>
+            <option value="" disabled selected>-- Choisissez un médecin --</option>
+            {% for doc in eligible_contacts %}
+            <option value="{{ doc.id }}">Dr. {{ doc.email }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
       {% else %}
-      <div style="background:#f8fafc;border:1px dashed var(--border);border-radius:10px;padding:20px;text-align:center;color:var(--muted);font-size:13.5px;">
-        {% if current_user.role == 'patient' %}
-        Vous n'avez pas de nouveau médecin disponible pour initier une conversation.
-        {% else %}
-        Tous vos patients suivis ont déjà une conversation ouverte, ou n'ont pas encore activé de compte utilisateur.
-        {% endif %}
+      <div class="field">
+        <label for="patient_id">Sélectionnez votre patient</label>
+        <div class="select-wrap">
+          <select name="patient_id" id="patient_id" required>
+            <option value="" disabled selected>-- Choisissez un patient --</option>
+            {% for pat in eligible_contacts %}
+            <option value="{{ pat.id }}">{{ pat.full_name }} ({{ pat.account.email }})</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
       {% endif %}
+
+      <button type="submit" class="btn-start-conv">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        Démarrer la conversation
+      </button>
+    </form>
+    {% else %}
+    <div class="empty-state">
+      {% if current_user.role == 'patient' %}
+      Vous n'avez pas de nouveau médecin disponible pour initier une conversation.
+      {% else %}
+      Tous vos patients suivis ont déjà une conversation ouverte, ou n'ont pas encore activé de compte utilisateur.
+      {% endif %}
     </div>
+    {% endif %}
   </div>
+</div>
+
+<style>
+  .panel {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    max-width: 420px;
+  }
+
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 7px;
+  }
+
+  /* Select custom, flèche propre, focus net */
+  .select-wrap { position: relative; }
+  .select-wrap::after {
+    content: "";
+    position: absolute;
+    right: 14px; top: 50%;
+    width: 9px; height: 9px;
+    border-right: 2px solid #64748B;
+    border-bottom: 2px solid #64748B;
+    transform: translateY(-65%) rotate(45deg);
+    pointer-events: none;
+  }
+  .select-wrap select {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background: #F8FAFC;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 38px 12px 14px;
+    font-size: 14px;
+    color: #0F172A;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  .select-wrap select:hover { border-color: #CBD5E1; }
+  .select-wrap select:focus {
+    outline: none;
+    border-color: #0D9488;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+  }
+
+  /* Bouton avec profondeur + icône */
+  .btn-start-conv {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 6px;
+    padding: 13px 16px;
+    background: linear-gradient(180deg, #14B8A6, #0D9488);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(13,148,136,0.25), 0 4px 10px rgba(13,148,136,0.18);
+    transition: transform .1s, box-shadow .15s, background .15s;
+  }
+  .btn-start-conv:hover {
+    background: linear-gradient(180deg, #0D9488, #0B7A70);
+    box-shadow: 0 2px 4px rgba(13,148,136,0.3), 0 6px 14px rgba(13,148,136,0.22);
+  }
+  .btn-start-conv:active { transform: translateY(1px); }
+
+  .empty-state {
+    background: #F8FAFC;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 24px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+</style>
 </div>
 {% endblock %}
