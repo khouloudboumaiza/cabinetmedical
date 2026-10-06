@@ -75,6 +75,13 @@ class User(db.Model, UserMixin):
             return PatientNotification.query.filter_by(patient_id=self.patient_profile.id, is_read=False).count()
         return 0
 
+    def unresolved_alerts_count(self):
+        """Retourne le nombre d'alertes de sécurité non résolues (pour les administrateurs)."""
+        if self.is_admin():
+            from models import SecurityAlert
+            return SecurityAlert.query.filter_by(resolved=False).count()
+        return 0
+
     def __repr__(self):
         return f"<User {self.email} ({self.role})>"
 
@@ -202,14 +209,45 @@ class LoginLog(db.Model):
     country = db.Column(db.String(100))
     login_method = db.Column(db.String(20))
     success = db.Column(db.Boolean, default=False)
+    is_tor = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     # --- Intégrité / anti-falsification (voir log_integrity.py) ---
     prev_hash = db.Column(db.String(64))
     entry_hash = db.Column(db.String(64))
 
+    def __init__(self, *args, **kwargs):
+        if "ip" in kwargs:
+            kwargs["ip_address"] = kwargs.pop("ip")
+        if "created_at" in kwargs:
+            kwargs["timestamp"] = kwargs.pop("created_at")
+        if "log_uid" not in kwargs:
+            import uuid
+            kwargs["log_uid"] = str(uuid.uuid4())
+        super().__init__(*args, **kwargs)
+
+    @property
+    def ip(self):
+        return self.ip_address
+
+    @ip.setter
+    def ip(self, value):
+        self.ip_address = value
+
+    @property
+    def created_at(self):
+        return self.timestamp
+
+    @created_at.setter
+    def created_at(self, value):
+        self.timestamp = value
+
     def __repr__(self):
         return f"<LoginLog user={self.user_id} {self.login_method} success={self.success}>"
+
+
+# Alias pour compatibilité
+LoginEvent = LoginLog
 
 
 class SecurityAlert(db.Model):
@@ -224,6 +262,40 @@ class SecurityAlert(db.Model):
     details = db.Column(db.Text)
     resolved = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+
+    def __init__(self, *args, **kwargs):
+        if "kind" in kwargs:
+            kwargs["alert_type"] = kwargs.pop("kind")
+        if "message" in kwargs:
+            kwargs["details"] = kwargs.pop("message")
+        if "created_at" in kwargs:
+            kwargs["timestamp"] = kwargs.pop("created_at")
+        super().__init__(*args, **kwargs)
+
+    @property
+    def kind(self):
+        return self.alert_type
+
+    @kind.setter
+    def kind(self, value):
+        self.alert_type = value
+
+    @property
+    def message(self):
+        return self.details
+
+    @message.setter
+    def message(self, value):
+        self.details = value
+
+    @property
+    def created_at(self):
+        return self.timestamp
+
+    @created_at.setter
+    def created_at(self, value):
+        self.timestamp = value
 
     def __repr__(self):
         return f"<SecurityAlert {self.alert_type} user={self.user_id}>"

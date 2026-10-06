@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Vérification de sécurité · MediCabinet{% endblock %}
+{% block crumb %}Vérification de sécurité{% endblock %}
+{% block crumbsub %}Authentification renforcée{% endblock %}
+
+{% macro render_verify_form() %}
+<div style="max-width: 480px; margin: 40px auto; padding: 0 16px;">
+  <div class="panel" style="background: #ffffff; border: 1px solid var(--border); border-radius: 12px; padding: 24px;">
+    <div class="panel-head" style="margin-bottom: 20px; text-align: center;">
+      <div style="font-size: 36px; margin-bottom: 10px;">🔐</div>
+      <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: var(--ink);">Vérification de sécurité</h3>
+    </div>
+
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px; margin-bottom: 20px; font-size: 13.5px; color: #1e40af; line-height: 1.5;">
+      Connexion inhabituelle détectée. Un code de vérification a été envoyé à votre adresse email (<strong>{{ email }}</strong>).
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div style="margin-bottom: 16px;">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}" style="margin-bottom: 8px;">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('auth.verify_geo') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+
+      <div class="field" style="margin-bottom: 20px;">
+        <label for="code" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 13.5px; color: var(--ink);">
+          Code de vérification (6 chiffres) :
+        </label>
+        <input
+          type="text"
+          name="code"
+          id="code"
+          inputmode="numeric"
+          maxlength="6"
+          autocomplete="one-time-code"
+          required
+          placeholder="123456"
+          autofocus
+          style="width: 100%; padding: 12px; font-size: 24px; letter-spacing: 8px; text-align: center; font-family: monospace; border: 1px solid var(--border); border-radius: 10px; box-sizing: border-box;"
+        >
+      </div>
+
+      <button type="submit" class="btn" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 600;">
+        Vérifier
+      </button>
+    </form>
+
+    <div style="margin-top: 20px; text-align: center; font-size: 12.5px; color: var(--muted);">
+      Le code expire dans 5 minutes. En cas de problème, contactez le secrétariat ou l'administrateur.
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% block guest %}
+{{ render_verify_form() }}
+{% endblock %}
+
+{% block content %}
+{{ render_verify_form() }}
+{% endblock %}

@@ -31,11 +31,12 @@ def get_country_from_ip(ip: str) -> str:
         return "Unknown"
 
 
-def log_login_attempt(user_id, ip, user_agent, method, success):
+def log_login_attempt(user_id, ip, user_agent, method, success, country=None, is_tor=False):
     from flask import current_app
     import uuid
 
-    country = get_country_from_ip(ip)
+    if not country:
+        country = get_country_from_ip(ip)
 
     # On récupère le hash précédent AVANT de créer la nouvelle entrée
     last_hash = _get_last_hash()
@@ -48,6 +49,7 @@ def log_login_attempt(user_id, ip, user_agent, method, success):
         country=country,
         login_method=method,
         success=success,
+        is_tor=is_tor,
     )
 
     # Le hash est calculé AVANT l'insertion : un seul INSERT est nécessaire,

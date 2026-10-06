@@ -1,4 +1,4 @@
-﻿# Environnement virtuel
+# Environnement virtuel
 venv/
 
 # Fichiers secrets et configuration
@@ -21,3 +21,5 @@ add_modal.py
 check_modal.py
 fix_index.py
 verify_modal.py
+# Base de données GeoIP
+GeoLite2-Country.mmdb

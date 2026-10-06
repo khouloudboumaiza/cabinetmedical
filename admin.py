@@ -66,21 +66,36 @@ def index():
 @admin_required
 def alerts():
     alert_type = request.args.get("type")
-    query = SecurityAlert.query.order_by(SecurityAlert.timestamp.desc())
+    
+    unresolved_q = SecurityAlert.query.filter_by(resolved=False).order_by(SecurityAlert.timestamp.desc())
     if alert_type:
-        query = query.filter_by(alert_type=alert_type)
-    all_alerts = query.limit(200).all()
-    return render_template("admin_alerts.html", alerts=all_alerts, filter_type=alert_type)
+        unresolved_q = unresolved_q.filter_by(alert_type=alert_type)
+    unresolved_alerts = unresolved_q.all()
+
+    resolved_q = SecurityAlert.query.filter_by(resolved=True).order_by(SecurityAlert.timestamp.desc())
+    if alert_type:
+        resolved_q = resolved_q.filter_by(alert_type=alert_type)
+    resolved_alerts = resolved_q.limit(20).all()
+
+    return render_template(
+        "admin_alerts.html",
+        unresolved_alerts=unresolved_alerts,
+        resolved_alerts=resolved_alerts,
+        alerts=unresolved_alerts + resolved_alerts,
+        filter_type=alert_type,
+    )
 
 
 @admin_bp.route("/alerts/<int:alert_id>/resolve", methods=["POST"])
 @login_required
 @admin_required
 def resolve_alert(alert_id):
+    from datetime import datetime
     alert = SecurityAlert.query.get_or_404(alert_id)
     alert.resolved = True
+    alert.resolved_at = datetime.utcnow()
     db.session.commit()
-    flash("Alerte marquée comme résolue.", "success")
+    flash("Alerte marquée comme traitée.", "success")
     return redirect(url_for("admin.alerts"))
 
 

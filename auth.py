@@ -129,17 +129,133 @@ def login():
             flash("Ce compte est temporairement verrouillé. Contactez un administrateur.", "error")
             return redirect(url_for("index"))
 
-        # Connexion réussie
-        login_user(user)
-        country = get_country_from_ip(ip)
-        log_login_attempt(user.id, ip, user_agent, "password", True)
-        run_all_checks(user.id, country)
+        # Connexion réussie au niveau du mot de passe
+        try:
+            from security_geo import check_login_anomaly
+            suspicious = check_login_anomaly(user)
+        except Exception as e:
+            current_app.logger.error(f"Erreur lors de la détection d'anomalies de connexion : {e}")
+            suspicious = False
 
+        if suspicious:
+            import secrets, hashlib, time
+            code = f"{secrets.randbelow(10**6):06d}"
+            code_hash = hashlib.sha256(code.encode("utf-8")).hexdigest()
+
+            from flask import session
+            session["geo_user_id"] = user.id
+            session["geo_code_hash"] = code_hash
+            session["geo_expires"] = int(time.time()) + 300  # 5 minutes
+            session["geo_attempts"] = 0
+            session["geo_remember"] = request.form.get("remember", "false").lower() in ("true", "1", "on")
+            session["geo_next"] = request.args.get("next") or request.form.get("next") or ""
+
+            send_geo_code(user.email, code)
+            flash("Connexion inhabituelle détectée. Un code de vérification a été envoyé à votre adresse email.", "warning")
+            return redirect(url_for("auth.verify_geo"))
+
+        login_user(user)
         flash("Connexion réussie.", "success")
         return redirect(url_for("cabinet.tableau_de_bord"))
 
     # GET -> redirige vers index, le modal s'ouvre via JavaScript
     return redirect(url_for("index"))
+
+
+def send_geo_code(email: str, code: str):
+    """Envoie le code de vérification à l'utilisateur.
+    En mode démo/développement, affiche le code dans la console/terminal.
+    En production, intégrer un service d'envoi d'email (ex: Flask-Mail / SMTP).
+    """
+    print(f"[OTP] Code de vérification pour {email} : {code}")
+
+
+@auth_bp.route("/verify-geo", methods=["GET", "POST"])
+def verify_geo():
+    from flask import session
+    from models import SecurityAlert
+
+    geo_user_id = session.get("geo_user_id")
+    if not geo_user_id:
+        flash("Aucune vérification de connexion en attente.", "error")
+        return redirect(url_for("index"))
+
+    user = User.query.get(geo_user_id)
+    if not user:
+        _clear_geo_session()
+        return redirect(url_for("index"))
+
+    if request.method == "POST":
+        import secrets, hashlib, time
+        code_input = request.form.get("code", "").strip()
+        now = int(time.time())
+        expires = session.get("geo_expires", 0)
+        attempts = session.get("geo_attempts", 0) + 1
+        session["geo_attempts"] = attempts
+
+        stored_hash = session.get("geo_code_hash", "")
+        input_hash = hashlib.sha256(code_input.encode("utf-8")).hexdigest()
+
+        is_expired = now > expires
+        is_correct = secrets.compare_digest(input_hash, stored_hash)
+
+        if not is_expired and is_correct:
+            remember = session.get("geo_remember", False)
+            next_url = session.get("geo_next", "")
+            _clear_geo_session()
+
+            login_user(user, remember=remember)
+
+            # Log de la connexion réussie après validation OTP
+            try:
+                from security_geo import get_client_ip, get_country, is_tor_ip
+                from detection import log_login_attempt
+                ip = get_client_ip()
+                country = get_country(ip)
+                tor = is_tor_ip(ip)
+                user_agent = request.headers.get("User-Agent", "") if request else ""
+                log_login_attempt(user.id, ip, user_agent, "password_otp", True, country=country, is_tor=tor)
+            except Exception:
+                pass
+
+            flash("Vérification réussie. Connexion établie.", "success")
+            if next_url and next_url.startswith("/"):
+                return redirect(next_url)
+            return redirect(url_for("cabinet.tableau_de_bord"))
+
+        # Échec ou expiration
+        if attempts >= 3 or is_expired:
+            from security_geo import get_client_ip, get_country
+            ip = get_client_ip()
+            country = get_country(ip) or "inconnu"
+
+            _clear_geo_session()
+
+            alert = SecurityAlert(
+                user_id=user.id,
+                kind="GEO_BLOCKED",
+                message=f"Échec de vérification OTP pour {user.email} depuis {ip} ({country}). 3 essais manqués ou code expiré."
+            )
+            db.session.add(alert)
+            db.session.commit()
+
+            flash("Trop d'essais ou code expiré. Contactez l'administrateur.", "error")
+            return redirect(url_for("index"))
+        else:
+            remaining = 3 - attempts
+            flash(f"Code incorrect. Essais restants : {remaining}.", "error")
+
+    return render_template("verify_geo.html", email=user.email)
+
+
+def _clear_geo_session():
+    from flask import session
+    session.pop("geo_user_id", None)
+    session.pop("geo_code_hash", None)
+    session.pop("geo_expires", None)
+    session.pop("geo_attempts", None)
+    session.pop("geo_remember", None)
+    session.pop("geo_next", None)
 
 
 @auth_bp.route("/logout")

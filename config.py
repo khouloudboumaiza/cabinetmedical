@@ -53,6 +53,11 @@ class Config:
     BRUTE_FORCE_MAX_ATTEMPTS = 5
     BRUTE_FORCE_WINDOW_MINUTES = 5
 
+    # Accepter l'en-tête X-Forwarded-For uniquement en mode démo ou derrière un reverse-proxy de confiance.
+    # ⚠️ À désactiver en production si l'application n'est pas derrière un proxy de confiance,
+    # car l'en-tête X-Forwarded-For peut être facilement falsifié par un attaquant.
+    TRUST_PROXY_HEADERS = os.environ.get("TRUST_PROXY_HEADERS", "false").lower() in ("1", "true")
+
     # Envoi d'alertes par email (optionnel, voir README.md)
     SMTP_HOST = os.environ.get("SMTP_HOST", "")
     SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))

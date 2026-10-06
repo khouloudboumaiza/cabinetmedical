@@ -1,17 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Alertes de sécurité · MediCabinet{% endblock %}
 {% block crumb %}Alertes sécurité{% endblock %}
-{% block crumbsub %}Détection d'anomalies : nouveau pays, brute-force, heure inhabituelle{% endblock %}
+{% block crumbsub %}Détection d'anomalies : géo-localisation, nœuds Tor, brute-force, heure inhabituelle{% endblock %}
 
 {% block content %}
 <!-- Filtres par type -->
 <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
   <a href="{{ url_for('admin.alerts') }}"
-     class="btn btn-sm {{ '' if filter_type else 'btn' }}"
-     style="{{ '' if filter_type else '' }}">
+     class="btn btn-sm {{ 'btn' if not filter_type else 'btn-outline' }}">
     Toutes
   </a>
-  {% for t in ['new_country','brute_force','unusual_time'] %}
+  {% for t in ['GEO_ANOMALY', 'TOR_EXIT', 'GEO_BLOCKED', 'new_country', 'brute_force', 'unusual_time'] %}
   <a href="{{ url_for('admin.alerts', type=t) }}"
      class="btn btn-sm {{ 'btn' if filter_type == t else 'btn-outline' }}">
     {{ t|replace('_',' ')|title }}
@@ -19,10 +18,11 @@
   {% endfor %}
 </div>
 
-<div class="panel">
-  <div class="panel-head">
-    <h3>🚨 Alertes de sécurité</h3>
-    <span style="color:var(--muted);font-size:13px">{{ alerts|length }} alerte(s)</span>
+<!-- Alertes Non Résolues -->
+<div class="panel" style="margin-bottom: 24px;">
+  <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center;">
+    <h3>🚨 Alertes à traiter</h3>
+    <span class="badge badge-fail">{{ unresolved_alerts|length if unresolved_alerts is defined else 0 }} alerte(s) en attente</span>
   </div>
   <table class="table">
     <thead>
@@ -30,41 +30,80 @@
         <th>Date</th>
         <th>Type</th>
         <th>Utilisateur</th>
-        <th>Détails</th>
-        <th>Résolue</th>
-        <th></th>
+        <th>Message / Détails</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>
-      {% for a in alerts %}
+      {% set pending = unresolved_alerts if unresolved_alerts is defined else alerts %}
+      {% for a in pending if not a.resolved %}
       <tr>
-        <td class="mono">{{ a.timestamp.strftime('%d/%m/%Y %H:%M') }}</td>
-        <td><span class="badge badge-fail">{{ a.alert_type }}</span></td>
-        <td>{{ a.user.email if a.user else '—' }}</td>
-        <td>{{ a.details }}</td>
+        <td class="mono">{{ (a.timestamp or a.created_at).strftime('%d/%m/%Y %H:%M') }}</td>
         <td>
-          {% if a.resolved %}
-          <span class="badge badge-success">Oui</span>
+          {% set kind_name = a.alert_type or a.kind %}
+          {% if kind_name == 'GEO_ANOMALY' %}
+          <span class="badge" style="background:#fef3c7;color:#92400e;">🌐 GEO ANOMALY</span>
+          {% elif kind_name == 'TOR_EXIT' %}
+          <span class="badge" style="background:#fee2e2;color:#b91c1c;">🧅 TOR EXIT</span>
+          {% elif kind_name == 'GEO_BLOCKED' %}
+          <span class="badge" style="background:#991b1b;color:#ffffff;">🚫 GEO BLOCKED</span>
+          {% elif kind_name == 'brute_force' %}
+          <span class="badge" style="background:#fee2e2;color:#b91c1c;">💥 BRUTE FORCE</span>
           {% else %}
-          <span class="badge badge-planifie">Non</span>
+          <span class="badge badge-fail">{{ kind_name }}</span>
           {% endif %}
         </td>
+        <td><strong>{{ a.user.email if a.user else '—' }}</strong></td>
+        <td>{{ a.details or a.message }}</td>
         <td>
-          {% if not a.resolved %}
           <form method="POST" action="{{ url_for('admin.resolve_alert', alert_id=a.id) }}">
-            <button class="btn btn-sm" type="submit">Résoudre</button>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+            <button class="btn btn-sm" type="submit">Marquer comme traité</button>
           </form>
-          {% endif %}
         </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="6" style="color:var(--success);text-align:center;padding:30px">
-          ✅ Aucune alerte — tout est normal.
+        <td colspan="5" style="color:var(--success);text-align:center;padding:30px">
+          ✅ Aucune alerte non résolue — tout est normal.
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+<!-- Alertes Résolues (Historique récent) -->
+{% if resolved_alerts is defined and resolved_alerts %}
+<div class="panel">
+  <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center;">
+    <h3>✅ Historique des alertes traitées (20 dernières)</h3>
+    <span style="color:var(--muted);font-size:13px">{{ resolved_alerts|length }} résolue(s)</span>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Date création</th>
+        <th>Type</th>
+        <th>Utilisateur</th>
+        <th>Message / Détails</th>
+        <th>Date résolution</th>
+        <th>Statut</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in resolved_alerts %}
+      <tr style="opacity: 0.8;">
+        <td class="mono">{{ (a.timestamp or a.created_at).strftime('%d/%m/%Y %H:%M') }}</td>
+        <td><span class="badge badge-success">{{ a.alert_type or a.kind }}</span></td>
+        <td>{{ a.user.email if a.user else '—' }}</td>
+        <td>{{ a.details or a.message }}</td>
+        <td class="mono">{{ a.resolved_at.strftime('%d/%m/%Y %H:%M') if a.resolved_at else '—' }}</td>
+        <td><span class="badge badge-success">Traitée</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 {% endblock %}
