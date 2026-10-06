@@ -120,3 +120,22 @@ def log_message_event(user_id, action, conversation_id=None, details=None, ip=No
     db.session.add(entry)
     db.session.commit()
     return entry
+
+
+def verify_message_log_chain(entries, secret_key: str):
+    """Vérifie l'intégrité de la chaîne cryptographique des logs de messagerie."""
+    prev_hash = GENESIS_HASH
+    for entry in entries:
+        expected = compute_message_log_hash(prev_hash, entry, secret_key)
+        if entry.entry_hash != expected:
+            return {
+                "valid": False,
+                "broken_at": entry.id,
+                "checked": entries.index(entry) + 1,
+                "reason": (
+                    "Hash incohérent dans message_logs : la ligne a été modifiée, "
+                    "ou une ligne précédente a été supprimée/modifiée."
+                ),
+            }
+        prev_hash = entry.entry_hash
+    return {"valid": True, "broken_at": None, "checked": len(entries)}

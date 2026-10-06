@@ -10,13 +10,14 @@
      class="btn btn-sm {{ 'btn' if not filter_type else 'btn-outline' }}">
     Toutes
   </a>
-  {% for t in ['GEO_ANOMALY', 'TOR_EXIT', 'GEO_BLOCKED', 'new_country', 'brute_force', 'unusual_time'] %}
+  {% for t in ['GEO_ANOMALY', 'TOR_EXIT', 'GEO_BLOCKED', 'DB_TAMPER_ATTEMPT', 'DB_TAMPER_DIRECT', 'LOG_INTEGRITY', 'TRIGGER_MISSING', 'UNLOCK_FAILED', 'ACCOUNT_UNLOCKED', 'new_country', 'brute_force', 'unusual_time'] %}
   <a href="{{ url_for('admin.alerts', type=t) }}"
      class="btn btn-sm {{ 'btn' if filter_type == t else 'btn-outline' }}">
     {{ t|replace('_',' ')|title }}
   </a>
   {% endfor %}
 </div>
+
 
 <!-- Alertes Non Résolues -->
 <div class="panel" style="margin-bottom: 24px;">
@@ -47,6 +48,18 @@
           <span class="badge" style="background:#fee2e2;color:#b91c1c;">🧅 TOR EXIT</span>
           {% elif kind_name == 'GEO_BLOCKED' %}
           <span class="badge" style="background:#991b1b;color:#ffffff;">🚫 GEO BLOCKED</span>
+          {% elif kind_name == 'DB_TAMPER_ATTEMPT' %}
+          <span class="badge" style="background:#991b1b;color:#ffffff;">⚠️ DB TAMPER ATTEMPT</span>
+          {% elif kind_name == 'DB_TAMPER_DIRECT' %}
+          <span class="badge" style="background:#7f1d1d;color:#ffffff;">⚡ DB TAMPER DIRECT</span>
+          {% elif kind_name == 'LOG_INTEGRITY' %}
+          <span class="badge" style="background:#b91c1c;color:#ffffff;">🔗 LOG INTEGRITY</span>
+          {% elif kind_name == 'TRIGGER_MISSING' %}
+          <span class="badge" style="background:#c2410c;color:#ffffff;">🛡️ TRIGGER MISSING</span>
+          {% elif kind_name == 'UNLOCK_FAILED' %}
+          <span class="badge" style="background:#991b1b;color:#ffffff;">🔓 UNLOCK FAILED</span>
+          {% elif kind_name == 'ACCOUNT_UNLOCKED' %}
+          <span class="badge" style="background:#065f46;color:#ffffff;">✅ ACCOUNT UNLOCKED</span>
           {% elif kind_name == 'brute_force' %}
           <span class="badge" style="background:#fee2e2;color:#b91c1c;">💥 BRUTE FORCE</span>
           {% else %}

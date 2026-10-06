@@ -10,6 +10,15 @@ from cabinet import cabinet_bp
 from messages import messages_bp, get_or_create_csrf_token
 
 
+from sqlalchemy.exc import IntegrityError
+from tamper_protection import (
+    install_tamper_protection_triggers,
+    sync_tamper_attempts,
+    verify_database_integrity,
+    start_tamper_monitoring_background_jobs,
+)
+
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -28,6 +37,39 @@ def create_app():
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
+
+    # --- Interception des erreurs de falsification (append-only) ---
+    @app.errorhandler(IntegrityError)
+    def handle_integrity_error(e):
+        db.session.rollback()
+        orig_msg = str(e.orig) if hasattr(e, "orig") else str(e)
+        if "append-only" in orig_msg or "lecture seule" in orig_msg or "RAISE" in orig_msg:
+            try:
+                from security_geo import get_client_ip, get_country
+                from flask import request
+                user_email = current_user.email if current_user and current_user.is_authenticated else "Anonyme"
+                ip = get_client_ip()
+                country = get_country(ip) or "inconnu"
+                route = request.path if request else "N/A"
+                method = request.method if request else "N/A"
+                user_agent = request.headers.get("User-Agent", "N/A") if request else "N/A"
+
+                alert_msg = (
+                    f"Tentative de modification illégale en base par {user_email} depuis {ip} ({country}) "
+                    f"sur {method} {route} [Agent: {user_agent}]."
+                )
+                from models import SecurityAlert
+                existing = SecurityAlert.query.filter_by(
+                    alert_type="DB_TAMPER_ATTEMPT",
+                    details=alert_msg,
+                    resolved=False
+                ).first()
+                if not existing:
+                    db.session.add(SecurityAlert(kind="DB_TAMPER_ATTEMPT", message=alert_msg))
+                    db.session.commit()
+            except Exception:
+                pass
+        return "Une erreur de sécurité est survenue (tentative de modification non autorisée).", 500
 
     # --- Context Processors ---
     @app.context_processor
@@ -54,6 +96,17 @@ def create_app():
     app.register_blueprint(cabinet_bp)
     app.register_blueprint(messages_bp)
 
+    # --- Vérification automatique de l'existence des tables au premier appel ---
+    @app.before_request
+    def _auto_init_tables():
+        if not getattr(app, "_tables_initialized", False):
+            try:
+                import models
+                db.create_all()
+                app._tables_initialized = True
+            except Exception:
+                pass
+
     # --- Routes principales ---
     @app.route("/")
     def index():
@@ -61,82 +114,29 @@ def create_app():
             return redirect(url_for("cabinet.tableau_de_bord"))
         return render_template("index.html")
 
-    # --- Création de la base + compte admin par défaut si absent ---
+    # --- Création de la base + compte admin par défaut + installation triggers et vérification ---
     with app.app_context():
+        import models
         db.create_all()
         _ensure_default_admin(app)
-        _install_tamper_protection_triggers()
+        install_tamper_protection_triggers()
+        verify_database_integrity()
+
+    start_tamper_monitoring_background_jobs(app)
 
     return app
 
 
 
-def _install_tamper_protection_triggers():
-    """
-    Installe des triggers SQLite qui bloquent toute tentative d'UPDATE
-    ou de DELETE sur les tables de logs/alertes — même via un accès
-    direct à la base de données (ex: sqlite3 app.db) ou une requête SQL
-    injectée. Seul un INSERT reste possible : les logs sont "append-only".
-
-    Défense en profondeur : à combiner avec le chaînage cryptographique
-    (log_integrity.py) qui, lui, DÉTECTE la falsification si elle a
-    quand même lieu (ex: si l'attaquant a un accès root au fichier .db
-    et le remplace complètement hors de l'application).
-    """
-    from sqlalchemy import text
-
-    triggers = [
-        """
-        CREATE TRIGGER IF NOT EXISTS prevent_login_logs_update
-        BEFORE UPDATE ON login_logs
-        BEGIN
-            SELECT RAISE(ABORT, 'login_logs est en lecture seule (append-only)');
-        END;
-        """,
-        """
-        CREATE TRIGGER IF NOT EXISTS prevent_login_logs_delete
-        BEFORE DELETE ON login_logs
-        BEGIN
-            SELECT RAISE(ABORT, 'login_logs est en lecture seule (append-only)');
-        END;
-        """,
-        """
-        CREATE TRIGGER IF NOT EXISTS prevent_alerts_delete
-        BEFORE DELETE ON security_alerts
-        BEGIN
-            SELECT RAISE(ABORT, 'security_alerts ne peut pas être supprimé');
-        END;
-        """,
-        """
-        CREATE TRIGGER IF NOT EXISTS prevent_message_logs_update
-        BEFORE UPDATE ON message_logs
-        BEGIN
-            SELECT RAISE(ABORT, 'message_logs est en lecture seule (append-only)');
-        END;
-        """,
-        """
-        CREATE TRIGGER IF NOT EXISTS prevent_message_logs_delete
-        BEFORE DELETE ON message_logs
-        BEGIN
-            SELECT RAISE(ABORT, 'message_logs est en lecture seule (append-only)');
-        END;
-        """,
-    ]
-    for trigger_sql in triggers:
-        db.session.execute(text(trigger_sql))
-    db.session.commit()
-
-
 def _ensure_default_admin(app):
-    """Crée un compte admin de démonstration si aucun n'existe.
-    Identifiants affichés dans la console au premier lancement."""
+    """Crée un compte admin de démonstration si aucun n'existe."""
     if User.query.filter_by(role="admin").first():
         return
 
     import secrets
 
     default_email = "admin@medicabinet.fr"
-    default_password = secrets.token_urlsafe(9)  # mot de passe fort généré aléatoirement
+    default_password = secrets.token_urlsafe(9)
     password_hash = bcrypt.generate_password_hash(default_password).decode("utf-8")
 
     admin = User(email=default_email, password_hash=password_hash, role="admin")
@@ -154,3 +154,4 @@ def _ensure_default_admin(app):
 if __name__ == "__main__":
     app = create_app()
     app.run(debug=True, host="0.0.0.0", port=5000)
+

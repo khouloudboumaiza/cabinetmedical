@@ -87,8 +87,29 @@ def check_new_country(user_id, current_country):
     return None
 
 
-def check_brute_force(user_id, ip, max_attempts=5, window_minutes=5):
+def check_brute_force(user_id, ip, max_attempts=3, window_minutes=5):
+    from models import AccountUnlock  # import local pour éviter les imports circulaires
+    from sqlalchemy import or_
+
     since = datetime.utcnow() - timedelta(minutes=window_minutes)
+
+    # Si le compte ou l'IP a été débloqué récemment, on ignore les échecs antérieurs au déblocage (en UTC).
+    # login_logs est append-only (chaîne HMAC) : on ne le modifie jamais.
+    unlock_filter = []
+    if user_id:
+        unlock_filter.append(AccountUnlock.user_id == user_id)
+    if ip:
+        unlock_filter.append(AccountUnlock.ip_address == ip)
+
+    if unlock_filter:
+        last_unlock = (
+            AccountUnlock.query
+            .filter(or_(*unlock_filter))
+            .order_by(AccountUnlock.unlocked_at.desc())
+            .first()
+        )
+        if last_unlock and last_unlock.unlocked_at > since:
+            since = last_unlock.unlocked_at
 
     query = LoginLog.query.filter(
         LoginLog.success.is_(False), LoginLog.timestamp >= since
@@ -110,6 +131,8 @@ def check_brute_force(user_id, ip, max_attempts=5, window_minutes=5):
         )
         return True
     return False
+
+
 
 
 def check_unusual_time(user_id):

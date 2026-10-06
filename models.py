@@ -395,4 +395,59 @@ class PatientNotification(db.Model):
     sender = db.relationship("User", foreign_keys=[sender_id])
 
     def __repr__(self):
-        return f"<PatientNotification {self.notification_type} patient={self.patient_id}>"
+        return f"<PatientNotification {self.notification_type} patient={self.patient_id}>"
+
+
+class TamperAttempt(db.Model):
+    """Journal de détection des tentatives de falsification directes ou applicatives en base de données."""
+
+    __tablename__ = "tamper_attempts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    table_name = db.Column(db.String(64), nullable=False)
+    operation = db.Column(db.String(10), nullable=False)  # UPDATE ou DELETE
+    row_id = db.Column(db.String(64), nullable=True)
+    detected_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    reviewed = db.Column(db.Boolean, default=False)
+
+    def __repr__(self):
+        return f"<TamperAttempt {self.operation} sur {self.table_name} id={self.row_id}>"
+
+
+class AccountUnlock(db.Model):
+    """Enregistre chaque déblocage réussi d'un compte (pour neutraliser les échecs antérieurs pour user_id et ip_address sans modifier login_logs)."""
+
+    __tablename__ = "account_unlocks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    ip_address = db.Column(db.String(64), nullable=True, index=True)
+    unlocked_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    user = db.relationship("User", foreign_keys=[user_id])
+
+    def __repr__(self):
+        return f"<AccountUnlock user_id={self.user_id} ip={self.ip_address} at={self.unlocked_at}>"
+
+
+
+class UnlockCode(db.Model):
+    """Code OTP de déblocage de compte après brute force."""
+
+    __tablename__ = "unlock_codes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    ip_address = db.Column(db.String(64), nullable=False)
+    code_hash = db.Column(db.String(64), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    attempts = db.Column(db.Integer, default=0)
+    used = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    user = db.relationship("User", foreign_keys=[user_id])
+
+    def __repr__(self):
+        return f"<UnlockCode user_id={self.user_id} attempts={self.attempts} used={self.used}>"
+
+

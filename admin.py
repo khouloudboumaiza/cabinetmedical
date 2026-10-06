@@ -65,6 +65,12 @@ def index():
 @login_required
 @admin_required
 def alerts():
+    from tamper_protection import sync_tamper_attempts
+    try:
+        sync_tamper_attempts()
+    except Exception as e:
+        current_app.logger.error(f"Erreur sync_tamper_attempts: {e}")
+
     alert_type = request.args.get("type")
     
     unresolved_q = SecurityAlert.query.filter_by(resolved=False).order_by(SecurityAlert.timestamp.desc())

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Déblocage de compte · MediCabinet{% endblock %}
+
+{% macro render_form() %}
+<div class="panel" style="max-width:480px;margin:48px auto;">
+  <div class="panel-head">
+    <h2>🔓 Débloquer mon compte</h2>
+  </div>
+  <div style="padding:24px;">
+    <p style="margin-bottom:18px;color:var(--muted);">
+      Suite à trop de tentatives de connexion incorrectes, votre compte a été temporairement bloqué.<br>
+      Saisissez votre adresse email pour recevoir un code de déblocage à 6 chiffres.
+    </p>
+
+    <form method="POST" action="{{ url_for('auth.unlock') }}">
+      <input type="hidden" name="csrf_token"
+             value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+
+      <div class="form-group" style="margin-bottom:16px;">
+        <label for="email">Adresse email</label>
+        <input type="email" id="email" name="email"
+               class="form-control" required autocomplete="email"
+               placeholder="exemple@domaine.fr"
+               style="margin-top:6px;width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;">
+      </div>
+
+      <button type="submit" class="btn" style="width:100%;">
+        Envoyer le code de déblocage
+      </button>
+    </form>
+
+    <p style="margin-top:16px;font-size:0.9em;color:var(--muted);text-align:center;">
+      <a href="{{ url_for('index') }}">← Retour à la connexion</a>
+    </p>
+  </div>
+</div>
+{% endmacro %}
+
+{% block guest %}{{ render_form() }}{% endblock %}
+{% block content %}{{ render_form() }}{% endblock %}

@@ -26,11 +26,13 @@ class Config:
     # Clé secrète Flask (sessions, CSRF). À changer en production.
     SECRET_KEY = os.environ.get("SECRET_KEY", "change-moi-en-production-" + os.urandom(8).hex())
 
-    # Base de données SQLite locale
+    # Base de données SQLite locale (chemin absolu normalisé)
+    _db_path = os.path.join(BASE_DIR, "app.db").replace("\\", "/")
     SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}"
+        "DATABASE_URL", f"sqlite:///{_db_path}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
 
     # Clé utilisée pour signer les tokens HMAC (reset password, etc.)
     HMAC_SECRET = os.environ.get("HMAC_SECRET", "hmac-secret-a-changer")
@@ -50,7 +52,7 @@ class Config:
     PERMANENT_SESSION_LIFETIME = 60 * 30  # 30 minutes
 
     # Détection d'anomalies
-    BRUTE_FORCE_MAX_ATTEMPTS = 5
+    BRUTE_FORCE_MAX_ATTEMPTS = 3
     BRUTE_FORCE_WINDOW_MINUTES = 5
 
     # Accepter l'en-tête X-Forwarded-For uniquement en mode démo ou derrière un reverse-proxy de confiance.

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Saisie du code de déblocage · MediCabinet{% endblock %}
+
+{% macro render_form() %}
+<div class="panel" style="max-width:480px;margin:48px auto;">
+  <div class="panel-head">
+    <h2>🔐 Saisie du code de déblocage</h2>
+  </div>
+  <div style="padding:24px;">
+    <p style="margin-bottom:18px;color:var(--muted);">
+      Un code à 6 chiffres a été envoyé à <strong>{{ email }}</strong>.<br>
+      Vous avez <strong>10 minutes</strong> pour le saisir (3 essais maximum).
+    </p>
+
+    <form method="POST" action="{{ url_for('auth.unlock_verify') }}">
+      <input type="hidden" name="csrf_token"
+             value="{{ csrf_token() if csrf_token is callable else csrf_token }}">
+
+      <div class="form-group" style="margin-bottom:16px;">
+        <label for="code">Code de déblocage</label>
+        <input type="text"
+               id="code"
+               name="code"
+               inputmode="numeric"
+               maxlength="6"
+               autocomplete="one-time-code"
+               required
+               placeholder="000000"
+               style="margin-top:6px;width:100%;padding:12px;font-size:1.4em;
+                      letter-spacing:8px;text-align:center;
+                      border:1px solid var(--border);border-radius:6px;">
+      </div>
+
+      <button type="submit" class="btn" style="width:100%;">
+        Vérifier le code
+      </button>
+    </form>
+
+    <p style="margin-top:16px;font-size:0.9em;color:var(--muted);text-align:center;">
+      Vous n'avez pas reçu de code ?
+      <a href="{{ url_for('auth.unlock') }}">Faire une nouvelle demande</a>
+    </p>
+    <p style="font-size:0.9em;color:var(--muted);text-align:center;">
+      <a href="{{ url_for('index') }}">← Retour à la connexion</a>
+    </p>
+  </div>
+</div>
+{% endmacro %}
+
+{% block guest %}{{ render_form() }}{% endblock %}
+{% block content %}{{ render_form() }}{% endblock %}
