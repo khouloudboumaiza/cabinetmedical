@@ -12,6 +12,36 @@ _reader = None
 _tor_cache = {"ips": set(), "ts": 0}
 
 
+def parse_ip(ip_str):
+    """
+    Extrait et normalise une adresse IP (IPv4 ou IPv6) avec le module ipaddress.
+    Gère les crochets [2001:db8::1] et les ports host:port.
+    Retourne un objet IPv4Address ou IPv6Address, ou None si invalide.
+    """
+    if not ip_str:
+        return None
+    s = str(ip_str).strip()
+    if s.startswith("["):
+        end = s.find("]")
+        if end != -1:
+            s = s[1:end]
+    elif ":" in s and "." in s and s.count(":") == 1:
+        # IPv4:port ex: 1.2.3.4:9001
+        s = s.split(":")[0]
+
+    try:
+        return ipaddress.ip_address(s)
+    except ValueError:
+        # Si le port est collé à la fin sans crochets
+        if ":" in s and not s.startswith("["):
+            parts = s.rsplit(":", 1)
+            try:
+                return ipaddress.ip_address(parts[0])
+            except ValueError:
+                pass
+        return None
+
+
 def _get_reader():
     """Gère un lecteur singleton pour la base de données GeoLite2.
     Si le fichier .mmdb n'est pas présent, retourne None sans planter.
@@ -30,7 +60,6 @@ def _get_reader():
 def get_client_ip():
     """Récupère l'adresse IP réelle du client.
     L'en-tête X-Forwarded-For est lu seulement si TRUST_PROXY_HEADERS est activé en config.
-    ⚠️ À désactiver en production si l'application n'est pas derrière un proxy de confiance.
     """
     if not request:
         return "127.0.0.1"
@@ -56,38 +85,85 @@ def get_country(ip):
 
 
 def load_tor_exit_ips():
-    """Télécharge et met en cache (pendant 1h) la liste des nœuds de sortie Tor depuis torproject.org."""
-    if time.time() - _tor_cache["ts"] > 3600:
+    """
+    Télécharge et met en cache (1h) la liste des nœuds de sortie Tor (IPv4 et IPv6).
+    Utilise en priorité Onionoo API, avec fallback sur torbulkexitlist puis sur le cache existant.
+    """
+    now = time.time()
+    if now - _tor_cache["ts"] < 3600 and _tor_cache["ips"]:
+        return _tor_cache["ips"]
+
+    new_ips = set()
+
+    # Source 1 : Onionoo API (inclut IPv4 et IPv6)
+    try:
+        url_onionoo = "https://onionoo.torproject.org/details?flag=Exit&running=true&fields=exit_addresses,or_addresses"
+        r = requests.get(url_onionoo, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            for relay in data.get("relays", []):
+                for addr in relay.get("exit_addresses", []):
+                    ip_str = addr.get("ip") if isinstance(addr, dict) else addr
+                    parsed = parse_ip(ip_str)
+                    if parsed:
+                        new_ips.add(parsed)
+                for addr in relay.get("or_addresses", []):
+                    ip_str = addr.get("ip") if isinstance(addr, dict) else addr
+                    parsed = parse_ip(ip_str)
+                    if parsed:
+                        new_ips.add(parsed)
+    except Exception as e:
+        if hasattr(current_app, "logger"):
+            current_app.logger.warning(f"Onionoo Tor list fetch failed: {e}")
+
+    # Source 2 (Fallback si Onionoo vide) : check.torproject.org
+    if not new_ips:
         try:
             r = requests.get("https://check.torproject.org/torbulkexitlist", timeout=10)
-            r.raise_for_status()
-            _tor_cache["ips"] = set(r.text.split())
-            _tor_cache["ts"] = time.time()
+            if r.status_code == 200:
+                for line in r.text.splitlines():
+                    parsed = parse_ip(line.strip())
+                    if parsed:
+                        new_ips.add(parsed)
         except Exception as e:
             if hasattr(current_app, "logger"):
-                current_app.logger.warning(f"Tor list fetch failed: {e}")
+                current_app.logger.warning(f"Tor bulk exit list fetch failed: {e}")
+
+    if new_ips:
+        _tor_cache["ips"] = new_ips
+        _tor_cache["ts"] = now
+
     return _tor_cache["ips"]
 
 
 def is_tor_ip(ip):
-    """Vérifie si l'adresse IP spécifiée est un nœud de sortie Tor.
-    Normalise l'IP (IPv4 et IPv6) pour la comparaison.
+    """
+    Vérifie si l'adresse IP spécifiée (IPv4 ou IPv6) est un nœud de sortie Tor.
+    Normalise les IP pour la comparaison avec ipaddress.
+    Ne lève jamais d'exception.
     """
     if not ip:
         return False
-    try:
-        target_ip = ipaddress.ip_address(ip)
-    except ValueError:
+
+    target_obj = parse_ip(ip)
+    if not target_obj:
         return False
 
-    tor_list = load_tor_exit_ips()
-    for tor_str in tor_list:
-        try:
-            if ipaddress.ip_address(tor_str) == target_ip:
-                return True
-        except ValueError:
-            continue
-    return False
+    is_found = False
+    try:
+        tor_set = load_tor_exit_ips()
+        # Support sets of ipaddress objects (real loader) AND sets of strings (test mocks)
+        is_found = target_obj in tor_set or str(target_obj) in tor_set
+    except Exception as e:
+        if hasattr(current_app, "logger"):
+            current_app.logger.warning(f"Erreur vérification is_tor_ip: {e}")
+        is_found = False
+
+    # Debug log uniquement en mode debug
+    if current_app and getattr(current_app, "debug", False):
+        print(f"[TOR] ip={ip} trouvé={is_found}")
+
+    return is_found
 
 
 def check_login_anomaly(user):
@@ -128,8 +204,7 @@ def check_login_anomaly(user):
             suspicious = True
             is_tor_exit = True
 
-        # Enregistrement de la tentative :
-        # Si suspecte, success=False pour ne pas enregistrer ce pays comme pays de référence tant que l'OTP n'est pas validé.
+        # Enregistrement de la tentative
         from detection import log_login_attempt
         user_agent = request.headers.get("User-Agent", "") if request else ""
         log_login_attempt(user.id, ip, user_agent, "password", not suspicious, country=country, is_tor=tor)

@@ -77,7 +77,12 @@ def google_callback():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     country = get_country_from_ip(ip)
     log_login_attempt(user.id, ip, request.headers.get("User-Agent", ""), "google", True)
-    run_all_checks(user.id, country)
+    try:
+        run_all_checks(user.id, country)
+    except Exception as ex:
+        if hasattr(current_app, "logger"):
+            current_app.logger.error(f"Erreur run_all_checks google_callback: {ex}")
+
 
     flash("Connexion via Google réussie.", "success")
     return redirect(url_for("cabinet.tableau_de_bord"))

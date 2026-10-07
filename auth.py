@@ -165,8 +165,15 @@ def login():
             return redirect(url_for("auth.verify_geo"))
 
         login_user(user)
+        try:
+            country = get_country_from_ip(ip)
+            run_all_checks(user.id, country)
+        except Exception as ex:
+            current_app.logger.error(f"Erreur run_all_checks login: {ex}")
+
         flash("Connexion réussie.", "success")
         return redirect(url_for("cabinet.tableau_de_bord"))
+
 
     # GET -> redirige vers index, le modal s'ouvre via JavaScript
     return redirect(url_for("index"))
@@ -227,14 +234,16 @@ def verify_geo():
             # Log de la connexion réussie après validation OTP
             try:
                 from security_geo import get_client_ip, get_country, is_tor_ip
-                from detection import log_login_attempt
+                from detection import log_login_attempt, run_all_checks
                 ip = get_client_ip()
                 country = get_country(ip)
                 tor = is_tor_ip(ip)
                 user_agent = request.headers.get("User-Agent", "") if request else ""
                 log_login_attempt(user.id, ip, user_agent, "password_otp", True, country=country, is_tor=tor)
-            except Exception:
-                pass
+                run_all_checks(user.id, country)
+            except Exception as ex:
+                current_app.logger.error(f"Erreur run_all_checks verify_geo: {ex}")
+
 
             flash("Vérification réussie. Connexion établie.", "success")
             if next_url and next_url.startswith("/"):

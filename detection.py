@@ -75,16 +75,29 @@ def check_new_country(user_id, current_country):
     previous = (
         LoginLog.query.filter_by(user_id=user_id, success=True)
         .order_by(LoginLog.timestamp.desc())
-        .limit(20)
+        .limit(21)
         .all()
     )
-    known_countries = {log.country for log in previous if log.country not in (None, "Local", "Unknown")}
+
+    if not previous:
+        return None
+
+    # Si la tentative la plus récente correspond à la connexion en cours (moins de 10s),
+    # on l'exclut pour évaluer les pays historiquement connus.
+    now = datetime.utcnow()
+    if (now - previous[0].timestamp).total_seconds() < 10 and previous[0].country == current_country:
+        prior_logs = previous[1:]
+    else:
+        prior_logs = previous
+
+    known_countries = {log.country for log in prior_logs if log.country not in (None, "Local", "Unknown")}
 
     if known_countries and current_country not in known_countries:
         return create_alert(
             user_id, "new_country", f"Connexion depuis un nouveau pays : {current_country}"
         )
     return None
+
 
 
 def check_brute_force(user_id, ip, max_attempts=3, window_minutes=5):
@@ -141,10 +154,20 @@ def check_unusual_time(user_id):
     previous = (
         LoginLog.query.filter_by(user_id=user_id, success=True)
         .order_by(LoginLog.timestamp.desc())
-        .limit(30)
+        .limit(31)
         .all()
     )
-    hours = [log.timestamp.hour for log in previous]
+
+    if not previous:
+        return None
+
+    now = datetime.utcnow()
+    if (now - previous[0].timestamp).total_seconds() < 10:
+        prior_logs = previous[1:]
+    else:
+        prior_logs = previous
+
+    hours = [log.timestamp.hour for log in prior_logs]
 
     if len(hours) < 5:
         return None
@@ -155,6 +178,7 @@ def check_unusual_time(user_id):
             user_id, "unusual_time", f"Connexion à {current_hour}h (heure inhabituelle pour cet utilisateur)"
         )
     return None
+
 
 
 def run_all_checks(user_id, country):
