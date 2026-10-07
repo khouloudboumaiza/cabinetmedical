@@ -173,11 +173,20 @@ def login():
 
 
 def send_geo_code(email: str, code: str):
-    """Envoie le code de vérification à l'utilisateur.
-    En mode démo/développement, affiche le code dans la console/terminal.
-    En production, intégrer un service d'envoi d'email (ex: Flask-Mail / SMTP).
-    """
-    print(f"[OTP] Code de vérification pour {email} : {code}")
+    """Envoie le code de vérification géo (durée d'expiration 5 minutes) via mailer.send_email."""
+    from mailer import send_email
+    subject = "[MediCabinet] Code de vérification de connexion"
+    body = (
+        "Bonjour,\n\n"
+        "Une connexion inhabituelle a été détectée sur votre compte MediCabinet.\n"
+        f"Votre code de vérification est : {code}\n\n"
+        "Ce code est valable pendant 5 minutes.\n"
+        "Si vous n'êtes pas à l'origine de cette demande, veuillez contacter immédiatement l'administrateur.\n\n"
+        "Cordialement,\n"
+        "L'équipe MediCabinet"
+    )
+    send_email(email, subject, body)
+
 
 
 @auth_bp.route("/verify-geo", methods=["GET", "POST"])
@@ -271,12 +280,20 @@ def _clear_geo_session():
 # ---------------------------------------------------------------------------
 
 def send_unlock_code(email: str, code: str):
-    """
-    Envoie le code de déblocage au propriétaire du compte.
-    En démo : affichage console.
-    En production : utiliser Flask-Mail/SMTP ou SMS Twilio.
-    """
-    print(f"[OTP-UNLOCK] Code de déblocage pour {email} : {code}")
+    """Envoie le code de déblocage brute-force (durée d'expiration 10 minutes) via mailer.send_email."""
+    from mailer import send_email
+    subject = "[MediCabinet] Code de déblocage de votre compte"
+    body = (
+        "Bonjour,\n\n"
+        "Votre compte MediCabinet a été temporairement bloqué suite à plusieurs tentatives de connexion échouées.\n"
+        f"Votre code de déblocage est : {code}\n\n"
+        "Ce code est valable pendant 10 minutes.\n"
+        "Après avoir vérifié ce code, il vous sera demandé de choisir un nouveau mot de passe pour des raisons de sécurité.\n\n"
+        "Cordialement,\n"
+        "L'équipe MediCabinet"
+    )
+    send_email(email, subject, body)
+
 
 
 def _hash_code(code: str) -> str:

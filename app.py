@@ -8,7 +8,8 @@ from oauth import oauth_bp, init_oauth
 from admin import admin_bp
 from cabinet import cabinet_bp
 from messages import messages_bp, get_or_create_csrf_token
-
+from dotenv import load_dotenv
+load_dotenv()
 
 from sqlalchemy.exc import IntegrityError
 from tamper_protection import (
